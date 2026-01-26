@@ -1,83 +1,104 @@
 import streamlit as st
+import requests # Required for live API info
 
 # 1. Setup
-st.set_page_config(page_title="Global Parlay Pro - Master", layout="wide")
-st.title("🌎 Global Multi-Sport Parlay Audit")
+st.set_page_config(page_title="Global Parlay Pro - LIVE", layout="wide")
+
+# Helper Function: Forces lines to .0 or .5 only
+def round_to_betting_line(value):
+    return round(value * 2) / 2
 
 # 2. Sidebar Navigation
-mode = st.sidebar.radio("Navigation", ["Single Game Audit", "Head-to-Head Comparison", "Live Stat Tracker"])
+st.sidebar.title("Configuration")
+api_key = st.sidebar.text_input("API Key", type="password") # Secure input
+mode = st.sidebar.radio("Navigation", ["Live Game Audit", "Head-to-Head", "Stat Tracker"])
 sport = st.sidebar.selectbox("Select Sport", ["NBA", "NFL", "Soccer"])
-bankroll = st.sidebar.number_input("Bankroll ($)", value=1000)
 
-# 3. Comprehensive Data Lists
+# 3. Dynamic Data Lists
 if sport == "NBA":
     teams = ["Lakers", "Warriors", "Celtics", "Nuggets", "Suns", "Knicks", "Bucks", "76ers"]
-    stats = ["Points", "Rebounds", "Assists", "3PM", "Steals", "Blocks"]
+    stats = ["Points", "Rebounds", "Assists", "3PM"]
 elif sport == "NFL":
     teams = ["Chiefs", "Eagles", "49ers", "Bengals", "Cowboys", "Ravens", "Bills"]
-    stats = ["Passing Yards", "Passing TDs", "Rushing Yards", "Receiving Yards", "Receptions"]
+    stats = ["Passing Yards", "Passing TDs", "Rushing Yards", "Receiving Yards"]
 else: # Soccer
     teams = ["Man City", "Arsenal", "Liverpool", "Real Madrid", "Barcelona", "Bayern Munich"]
-    stats = ["Goals", "Assists", "Shots on Target", "Corners", "Yellow Cards"]
+    stats = ["Goals", "Assists", "Shots on Target", "Corners"]
 
-# --- MODE 1: SINGLE GAME AUDIT ---
-if mode == "Single Game Audit":
+# 4. API Logic: Fetching Live Data
+def get_live_stats(team_name):
+    # This is a template URL; replace with your specific API endpoint
+    url = f"https://api.sportsdata.io/v3/{sport}/scores/json/LiveStats/{team_name}"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    
+    try:
+        # response = requests.get(url, headers=headers) # Uncomment when API is ready
+        # data = response.json()
+        return {"status": "Live", "current_score": "102-98"} # Mock data for demonstration
+    except:
+        return None
+
+# --- MODE 1: LIVE GAME AUDIT ---
+if mode == "Live Game Audit":
+    st.title("🌎 Live Multi-Sport Parlay Audit")
     col1, col2 = st.columns(2)
+    
     with col1:
         st.header("📋 Selection")
         team = st.selectbox("Select Team", teams)
-        selected_props = st.multiselect("Market Props", [f"{s} Over" for s in stats] + [f"{s} Under" for s in stats])
+        live_data = get_live_stats(team)
+        
+        if live_data:
+            st.success(f"Connected to Live API: {team} is currently {live_data['current_score']}")
+        
+        # User sets the line - function ensures it is .0 or .5
+        raw_line = st.number_input("Target Line (Points/Stat)", value=25.0, step=0.5)
+        clean_line = round_to_betting_line(raw_line)
+        st.caption(f"Betting Line Adjusted to: **{clean_line}**")
+
     with col2:
         st.header("🚨 Context")
         is_injured = st.toggle("Key Player Out?")
         spread = st.slider("Spread", 0.0, 20.0, 4.5)
     
-    # Logic
-    risk = (len(selected_props) * 15) + (20 if is_injured else 0)
-    conf = max(5, 90 - risk)
-    st.metric("Hit Possibility", f"{conf}%", delta=f"-{risk}% Risk")
+    st.markdown("---")
+    risk = (15 if is_injured else 0) + (10 if spread > 10 else 0)
+    conf = max(5, 95 - risk)
+    st.metric("Global Hit Possibility", f"{conf}%")
 
 # --- MODE 2: HEAD-TO-HEAD (H2H) ---
-elif mode == "Head-to-Head Comparison":
-    st.header("⚔️ Team vs Team Audit")
+elif mode == "Head-to-Head":
+    st.header("⚔️ Team vs Team Live Audit")
     h1, h2 = st.columns(2)
     with h1:
-        t1 = st.selectbox("Team A (Home)", teams, index=0)
-        s1 = st.slider(f"{t1} Strength", 0, 100, 75)
+        t1 = st.selectbox("Home Team", teams, index=0)
+        s1 = st.slider(f"{t1} Strength", 0, 100, 80)
     with h2:
-        t2 = st.selectbox("Team B (Away)", teams, index=1)
-        s2 = st.slider(f"{t2} Strength", 0, 100, 70)
+        t2 = st.selectbox("Away Team", teams, index=1)
+        s2 = st.slider(f"{t2} Strength", 0, 100, 75)
     
-    diff = abs(s1 - s2)
-    if s1 > s2:
-        st.success(f"Advantage: **{t1}** (By {diff} power points)")
-    else:
-        st.success(f"Advantage: **{t2}** (By {diff} power points)")
+    res = "Home Advantage" if s1 >= s2 else "Away Advantage"
+    st.info(f"Analysis: **{res}** detected for this matchup.")
 
-# --- MODE 3: LIVE STAT TRACKER ---
-elif mode == "Live Stat Tracker":
-    st.header("⏱️ Live Player Performance Tracking")
-    st.info("Input live data to see if your parlay leg is still alive.")
+# --- MODE 3: STAT TRACKER ---
+elif mode == "Stat Tracker":
+    st.header("⏱️ Live Player Tracker (.5 / .0 Lines Only)")
     
     p_col1, p_col2, p_col3 = st.columns(3)
     with p_col1:
-        p_name = st.text_input("Player Name", "LeBron James")
-        p_stat = st.selectbox("Tracking Stat", stats)
+        p_name = st.text_input("Player Name", "Enter Name")
+        p_stat = st.selectbox("Stat Category", stats)
     with p_col2:
-        target = st.number_input("Bet Line (O/U)", value=25.5)
+        # Ensuring the line is always a betting line (.5 or .0)
+        target = st.number_input("Betting Line", value=1.5, step=0.5)
+        target = round_to_betting_line(target)
         side = st.radio("Side", ["Over", "Under"])
     with p_col3:
-        current = st.number_input("Current Live Stat", value=18.0)
-    
+        # This would eventually be filled by your API
+        current = st.number_input("Live Current Stat", value=0.0)
+
     # Progress Calculation
-    progress = (current / target) if side == "Over" else (target - current) / target
-    st.write(f"**{p_name}** needs {max(0.0, target - current)} more {p_stat} to hit the Over.")
-    st.progress(min(1.0, progress))
-    
-    if side == "Over":
-        if current >= target: st.success("🎯 LEG HIT!")
-        elif current > (target * 0.75): st.warning("🔥 Heating Up - Close to hitting")
-        else: st.error("❄️ Cold - Needs a big run")
-    else: # Under
-        if current >= target: st.error("❌ LEG BUSTED (Went Over)")
-        else: st.success("✅ Leg Safe (Still Under)")
+    if target > 0:
+        progress = min(1.0, current / target)
+        st.progress(progress)
+        st.write(f"**{p_name}** is {current}/{target} for the {side}.")
