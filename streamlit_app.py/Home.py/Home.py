@@ -36,12 +36,13 @@ with col2:
         st.warning("📉 Advantage UNDER. Loose officials allow more physical defense.")
 
 # RESULT BOX
-st.markdown(---)
+st.markdown("---")
 if st.button(Calculate Global Confidence)
     # Base calculation logic
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
 
 
 
