@@ -32,7 +32,7 @@ with col2:
     
     if ref_style == "Tight" ("Foul Heavy"):
         st.info("📈 Advantage OVER. Tight whistles lead to more Free ThrowsPenalties.")
-    elif ref_style == Loose (Plays On)
+    elif ref_style == "Loose" ("Plays On")
         st.warning("📉 Advantage UNDER. Loose officials allow more physical defense.")
 
 # RESULT BOX
@@ -42,6 +42,7 @@ if st.button(Calculate Global Confidence)
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
 
 
 
