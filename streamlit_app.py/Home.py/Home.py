@@ -8,7 +8,7 @@ st.title("🌎 Global Multi-Sport Parlay Audit")
 st.markdown("---")
 
 # SIDEBAR CONFIG
-st.sidebar.header(Global Settings)
+st.sidebar.header("Global Settings")
 sport = st.sidebar.selectbox(Select Sport, [NBA, NFL, Soccer, MLB, NHL])
 prop_line = st.sidebar.number_input(Prop Line, value=20.5)
 
@@ -42,6 +42,7 @@ if st.button(Calculate Global Confidence)
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
 
 
 
