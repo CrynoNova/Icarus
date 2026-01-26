@@ -26,7 +26,7 @@ with col1:
     else:
         st.success("f✅ Low Blowout Risk ({spread} pts)")
 
-with col2
+with col2:
     st.subheader("🏁 OfficialReferee Factor")
     ref_style = st.radio("Official's Whistle Tendency", ["Tight" ("Foul Heavy"), "Average", "Loose" ("Plays On")])
     
@@ -42,6 +42,7 @@ if st.button(Calculate Global Confidence)
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
 
 
 
