@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title=Global Parlay Pro, layout=wide)
+st.set_page_config(page_title="Global Parlay Pro", layout="wide")
 
 # TITLE
 st.title("🌎 Global Multi-Sport Parlay Audit")
@@ -42,6 +42,7 @@ if st.button(Calculate Global Confidence)
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
 
 
 
