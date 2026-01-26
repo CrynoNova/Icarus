@@ -1,97 +1,83 @@
 import streamlit as st
 
-# 1. Page Configuration
-st.set_page_config(page_title="Global Parlay Pro", layout="wide")
+# 1. Setup
+st.set_page_config(page_title="Global Parlay Pro - Master", layout="wide")
 st.title("🌎 Global Multi-Sport Parlay Audit")
 
-# 2. Sidebar: Global Settings & Bankroll
+# 2. Sidebar Navigation
+mode = st.sidebar.radio("Navigation", ["Single Game Audit", "Head-to-Head Comparison", "Live Stat Tracker"])
 sport = st.sidebar.selectbox("Select Sport", ["NBA", "NFL", "Soccer"])
-bankroll = st.sidebar.number_input("Total Bankroll ($)", min_value=0, value=1000)
+bankroll = st.sidebar.number_input("Bankroll ($)", value=1000)
 
-# 3. Comprehensive Team Lists
+# 3. Comprehensive Data Lists
 if sport == "NBA":
-    teams = [
-        "Atlanta Hawks", "Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", 
-        "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", 
-        "Houston Rockets", "Indiana Pacers", "LA Clippers", "LA Lakers", "Memphis Grizzlies", 
-        "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", 
-        "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", 
-        "Sacramento Kings", "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"
-    ]
-    props = ["Points Over", "Points Under", "Rebounds Over", "Assists Over", "Made 3-Pointers", "Double-Double"]
+    teams = ["Lakers", "Warriors", "Celtics", "Nuggets", "Suns", "Knicks", "Bucks", "76ers"]
+    stats = ["Points", "Rebounds", "Assists", "3PM", "Steals", "Blocks"]
 elif sport == "NFL":
-    teams = [
-        "Arizona Cardinals", "Atlanta Falcons", "Baltimore Ravens", "Buffalo Bills", "Carolina Panthers", 
-        "Chicago Bears", "Cincinnati Bengals", "Cleveland Browns", "Dallas Cowboys", "Denver Broncos", 
-        "Detroit Lions", "Green Bay Packers", "Houston Texans", "Indianapolis Colts", "Jacksonville Jaguars", 
-        "Kansas City Chiefs", "Las Vegas Raiders", "Los Angeles Chargers", "Los Angeles Rams", "Miami Dolphins", 
-        "Minnesota Vikings", "New England Patriots", "New Orleans Saints", "New York Giants", "New York Jets", 
-        "Philadelphia Eagles", "Pittsburgh Steelers", "San Francisco 49ers", "Seattle Seahawks", "Tampa Bay Buccaneers", 
-        "Tennessee Titans", "Washington Commanders"
-    ]
-    props = ["Passing TDs Over", "Rushing Yards Over", "Anytime TD Scorer", "Receiving Yards Over", "Spread Cover"]
+    teams = ["Chiefs", "Eagles", "49ers", "Bengals", "Cowboys", "Ravens", "Bills"]
+    stats = ["Passing Yards", "Passing TDs", "Rushing Yards", "Receiving Yards", "Receptions"]
 else: # Soccer
-    teams = [
-        "Man City", "Arsenal", "Liverpool", "Real Madrid", "Barcelona", "Bayern Munich", 
-        "PSG", "Inter Milan", "AC Milan", "Juventus", "Bayer Leverkusen", "Aston Villa"
-    ]
-    props = ["Goals Over 2.5", "Goals Under 2.5", "BTTS - Yes", "Player to Score", "Corners Over"]
+    teams = ["Man City", "Arsenal", "Liverpool", "Real Madrid", "Barcelona", "Bayern Munich"]
+    stats = ["Goals", "Assists", "Shots on Target", "Corners", "Yellow Cards"]
 
-# 4. Interactive Audit Columns
-col1, col2, col3 = st.columns(3)
+# --- MODE 1: SINGLE GAME AUDIT ---
+if mode == "Single Game Audit":
+    col1, col2 = st.columns(2)
+    with col1:
+        st.header("📋 Selection")
+        team = st.selectbox("Select Team", teams)
+        selected_props = st.multiselect("Market Props", [f"{s} Over" for s in stats] + [f"{s} Under" for s in stats])
+    with col2:
+        st.header("🚨 Context")
+        is_injured = st.toggle("Key Player Out?")
+        spread = st.slider("Spread", 0.0, 20.0, 4.5)
+    
+    # Logic
+    risk = (len(selected_props) * 15) + (20 if is_injured else 0)
+    conf = max(5, 90 - risk)
+    st.metric("Hit Possibility", f"{conf}%", delta=f"-{risk}% Risk")
 
-with col1:
-    st.header("📋 Selections")
-    selected_team = st.selectbox("Select Team", teams)
-    selected_props = st.multiselect("Markets & Props", props)
-    odds = st.number_input("Decimal Odds (e.g. 2.00)", value=1.91)
+# --- MODE 2: HEAD-TO-HEAD (H2H) ---
+elif mode == "Head-to-Head Comparison":
+    st.header("⚔️ Team vs Team Audit")
+    h1, h2 = st.columns(2)
+    with h1:
+        t1 = st.selectbox("Team A (Home)", teams, index=0)
+        s1 = st.slider(f"{t1} Strength", 0, 100, 75)
+    with h2:
+        t2 = st.selectbox("Team B (Away)", teams, index=1)
+        s2 = st.slider(f"{t2} Strength", 0, 100, 70)
+    
+    diff = abs(s1 - s2)
+    if s1 > s2:
+        st.success(f"Advantage: **{t1}** (By {diff} power points)")
+    else:
+        st.success(f"Advantage: **{t2}** (By {diff} power points)")
 
-with col2:
-    st.header("🚨 Risk Factors")
-    is_injured = st.toggle("Key Player Out?")
-    is_b2b = st.toggle("Back-to-Back Game?")
-    bad_weather = st.toggle("Severe Weather?")
-    spread = st.slider("Spread/Handicap", 0.0, 20.0, 3.5)
-
-with col3:
-    st.header("🏁 Official Factor")
-    ref_style = st.radio("Official Tendency", ["Tight (Foul Heavy)", "Average", "Loose (Plays On)"])
-
-st.markdown("---")
-
-# 5. Logic Engine (Hit Possibility Calculation)
-base_conf = 85
-# Penalty points
-penalties = (len(selected_props) * 12)
-if is_injured: penalties += 15
-if is_b2b: penalties += 10
-if bad_weather: penalties += 10
-if spread > 10: penalties += 10
-if ref_style == "Tight (Foul Heavy)" and sport == "NBA": penalties += 5
-
-confidence = max(5, base_conf - penalties)
-
-# 6. Results & Bankroll Management
-st.subheader("📊 Audit Results")
-res1, res2, res3 = st.columns(3)
-
-with res1:
-    st.metric("Hit Possibility", f"{confidence}%")
-with res2:
-    # Simplified stake recommendation
-    suggested_stake = (bankroll * (confidence / 100)) * 0.05
-    st.metric("Suggested Stake", f"${suggested_stake:.2f}")
-with res3:
-    risk_status = "🔥 HIGH" if confidence < 45 else "⚠️ MED" if confidence < 75 else "✅ LOW"
-    st.metric("Risk Level", risk_status)
-
-# Visual Alerts
-if confidence < 45:
-    st.error(f"AUDIT FAILED: High risk for **{selected_team}**. Too many negative factors.")
-elif confidence < 75:
-    st.warning(f"AUDIT CAUTION: Moderate risk detected. Adjust your units.")
-else:
-    st.success(f"AUDIT PASSED: Strong conditions for **{selected_team}**.")
-
-if selected_props:
-    st.write(f"Legs included: {', '.join(selected_props)}")
+# --- MODE 3: LIVE STAT TRACKER ---
+elif mode == "Live Stat Tracker":
+    st.header("⏱️ Live Player Performance Tracking")
+    st.info("Input live data to see if your parlay leg is still alive.")
+    
+    p_col1, p_col2, p_col3 = st.columns(3)
+    with p_col1:
+        p_name = st.text_input("Player Name", "LeBron James")
+        p_stat = st.selectbox("Tracking Stat", stats)
+    with p_col2:
+        target = st.number_input("Bet Line (O/U)", value=25.5)
+        side = st.radio("Side", ["Over", "Under"])
+    with p_col3:
+        current = st.number_input("Current Live Stat", value=18.0)
+    
+    # Progress Calculation
+    progress = (current / target) if side == "Over" else (target - current) / target
+    st.write(f"**{p_name}** needs {max(0.0, target - current)} more {p_stat} to hit the Over.")
+    st.progress(min(1.0, progress))
+    
+    if side == "Over":
+        if current >= target: st.success("🎯 LEG HIT!")
+        elif current > (target * 0.75): st.warning("🔥 Heating Up - Close to hitting")
+        else: st.error("❄️ Cold - Needs a big run")
+    else: # Under
+        if current >= target: st.error("❌ LEG BUSTED (Went Over)")
+        else: st.success("✅ Leg Safe (Still Under)")
