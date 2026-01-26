@@ -16,7 +16,7 @@ prop_line = st.sidebar.number_input(Prop Line, value=20.5)
 col1, col2 = st.columns(2)
 
 with col1
-    st.subheader(🎲 Game Context)
+    st.subheader("🎲 Game Context")
     spread = st.slider(Point Spread (Vegas Line), 0.0, 25.0, 5.5)
     
     # Blowout Logic
@@ -42,3 +42,4 @@ if st.button(Calculate Global Confidence)
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
