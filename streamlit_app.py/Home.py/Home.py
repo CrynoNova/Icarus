@@ -41,7 +41,8 @@ if st.button("Calculate Global Confidence"):
     # Base calculation logic
     confidence = 85 if spread >10 and ref_style == "Tight" ("Foul Heavy") else 55
 
-    st.metric("Global Hit Probability", f{"confidence"}%)
+    st.metric("Global Hit Probability", f"{confidence}%")
+
 
 
 
