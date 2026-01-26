@@ -23,7 +23,7 @@ with col1:
     if spread >= "12.0":
         st.error(f"⚠️ HIGH BLOWOUT RISK ({spread} pts)")
         st.caption("Star players are likely to sit the 4th quarter. 'Overs' are high-risk.")
-    else
+    else:
         st.success("f✅ Low Blowout Risk ({spread} pts)")
 
 with col2
@@ -42,6 +42,7 @@ if st.button(Calculate Global Confidence)
     confidence = 85 if (spread  10 and ref_style == Tight (Foul Heavy)) else 55
 
     st.metric(Global Hit Probability, f{confidence}%)
+
 
 
 
