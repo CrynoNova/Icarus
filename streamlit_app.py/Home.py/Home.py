@@ -40,7 +40,7 @@ def get_live_stats(team_name):
 
 # --- MODE 1: LIVE GAME AUDIT ---
 if mode == "Live Game Audit":
-    st.title("🌎 Live Multi-Sport Parlay Audit")
+    st.title("🌎" "Live Multi-Sport Parlay Audit")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -102,3 +102,4 @@ elif mode == "Stat Tracker":
         progress = min(1.0, current / target)
         st.progress(progress)
         st.write(f"**{p_name}** is {current}/{target} for the {side}.")
+
