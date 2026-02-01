@@ -3,10 +3,12 @@
   "short_name": "Parlay Pro",
   "description": "AI-powered parlay builder with 150+ global athletes across NBA, NFL, Soccer, MLB, NHL, UFC, Tennis",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0e1117",
-  "theme_color": "#1f77b4",
-  "orientation": "portrait",
+  "background_color": "#1e1e1e",
+  "theme_color": "#667eea",
+  "orientation": "any",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
@@ -43,7 +45,10 @@
     {
       "src": "screenshot1.png",
       "sizes": "540x720",
-      "type": "image/png"
+      "type": "image/png",
+      "form_factor": "narrow"
     }
-  ]
+  ],
+  "lang": "en-US",
+  "dir": "ltr"
 }

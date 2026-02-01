@@ -59,7 +59,7 @@ st.set_page_config(
     page_title="Parlay Pro - AI Risk Calculator",
     page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",  # Auto-collapse on mobile
     menu_items={
         'Get Help': None,
         'Report a bug': None,
@@ -71,6 +71,15 @@ st.set_page_config(
 if 'parlay_legs' not in st.session_state:
     st.session_state.parlay_legs = []
 
+# Add viewport meta tag for proper mobile scaling
+st.markdown("""
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#667eea">
+""", unsafe_allow_html=True)
+
 # MOBILE-FIRST CSS - Enhanced Design
 st.markdown("""
     <style>
@@ -78,6 +87,8 @@ st.markdown("""
         .stApp {
             max-width: 100%;
             background-color: #1e1e1e;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         
         /* Main content area */
@@ -248,28 +259,135 @@ st.markdown("""
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
         
-        /* Mobile Breakpoints */
+        /* Mobile Breakpoints - Enhanced Accessibility */
         @media (max-width: 768px) {
+            /* Larger touch targets (min 44x44px for accessibility) */
+            .stButton > button {
+                min-height: 44px !important;
+                padding: 0.75rem 1rem !important;
+                font-size: 16px !important;
+            }
+            
+            /* Prevent zoom on iOS */
+            .stTextInput > div > div > input,
+            .stNumberInput > div > div > input,
+            .stSelectbox > div > div > select {
+                font-size: 16px !important;
+            }
+            
+            /* Readable text sizes */
             .stMetric { 
-                padding: 0.5rem;
-                font-size: 0.9rem;
+                padding: 0.75rem;
+                font-size: 1rem;
             }
-            .stSelectbox, .stNumberInput, .stTextInput { 
-                margin: 0.25rem 0;
-                font-size: 16px !important; /* Prevent iOS zoom */
+            
+            [data-testid="stMetricValue"] {
+                font-size: 1.5rem !important;
             }
-            h1 { font-size: 1.5rem !important; }
-            h2 { font-size: 1.25rem !important; }
-            h3 { font-size: 1.1rem !important; }
-            .prop-card { padding: 0.75rem; }
+            
+            /* Responsive typography */
+            h1 { font-size: 1.75rem !important; }
+            h2 { font-size: 1.5rem !important; }
+            h3 { font-size: 1.25rem !important; }
+            h4 { font-size: 1.1rem !important; }
+            
+            /* Larger spacing for touch */
+            .prop-card { 
+                padding: 1rem; 
+                margin: 0.75rem 0;
+            }
+            
+            .sidebar-leg-card {
+                padding: 1rem;
+                margin: 0.75rem 0;
+            }
+            
+            /* Better sidebar on mobile */
+            [data-testid="stSidebar"] {
+                min-width: 280px !important;
+            }
+            
+            /* Expander headers larger for touch */
+            .streamlit-expanderHeader {
+                min-height: 48px !important;
+                font-size: 1.1rem !important;
+            }
+            
+            /* Column spacing on mobile */
+            [data-testid="column"] {
+                padding: 0.5rem !important;
+            }
         }
         
+        /* Tablet optimization */
         @media (min-width: 769px) and (max-width: 1024px) {
-            .stApp { max-width: 100%; }
+            .stApp { 
+                max-width: 100%; 
+                padding: 0 1rem;
+            }
+            
+            .stButton > button {
+                min-height: 40px !important;
+            }
         }
         
         @media (min-width: 1025px) {
             .stApp { max-width: 1400px; margin: 0 auto; }
+        }
+        
+        /* Focus indicators for keyboard navigation */
+        .stButton > button:focus,
+        .stTextInput > div > div > input:focus,
+        .stNumberInput > div > div > input:focus,
+        .stSelectbox > div > div > select:focus {
+            outline: 3px solid #667eea !important;
+            outline-offset: 2px !important;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .stApp {
+                background-color: #000000;
+            }
+            
+            .main {
+                background-color: #000000;
+            }
+            
+            .stApp, .main, p, span, div, label {
+                color: #ffffff !important;
+            }
+            
+            .stButton > button {
+                border: 2px solid #ffffff !important;
+            }
+        }
+        
+        /* Reduce motion for accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+            
+            .live-badge {
+                animation: none !important;
+            }
+            
+            .stButton > button:hover {
+                transform: none !important;
+            }
+        }
+        
+        /* Better link visibility */
+        a {
+            color: #64b5f6 !important;
+            text-decoration: underline !important;
+        }
+        
+        a:hover {
+            color: #90caf9 !important;
         }
     </style>
 """, unsafe_allow_html=True)
