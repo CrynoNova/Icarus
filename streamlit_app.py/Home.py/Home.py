@@ -102,4 +102,3 @@ elif mode == "Stat Tracker":
         progress = min(1.0, current / target)
         st.progress(progress)
         st.write(f"**{p_name}** is {current}/{target} for the {side}.")
-
