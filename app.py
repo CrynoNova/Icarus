@@ -1554,76 +1554,236 @@ st.caption("📊 Add legs • Watch real-time progress • Get AI recommendation
 # Data accuracy info
 st.info("🔴 = Live ESPN data | ✅ = Database player | ⚪ = Fallback | 📡 ESPN APIs queried for all stats", icon="ℹ️")
 
-# UPCOMING GAMES SECTION - Show next games with projected lines
-st.markdown("### 📅 Upcoming Games - Build Your Parlay")
+# ========================================
+# UPCOMING MATCHUPS PARLAY BUILDER - NEW FEATURE
+# ========================================
+st.markdown("### 🏀 Upcoming Matchups - Build Multi-Leg Parlays")
+st.caption("Select games below to see player props and build parlays from upcoming matchups")
+
 upcoming_games = fetch_upcoming_games("basketball", "nba")
 
 if upcoming_games:
-    st.success(f"🎯 {len(upcoming_games)} upcoming NBA games - Projected lines available", icon="📊")
+    # Show number of upcoming games
+    st.success(f"📅 {len(upcoming_games)} upcoming NBA games with projected props", icon="🎯")
     
-    # Show next 3 upcoming games
-    for game in upcoming_games[:3]:
+    # Create expandable cards for each matchup
+    for game_idx, game in enumerate(upcoming_games[:8]):  # Show up to 8 games
         try:
             away, home, _, _, status = parse_espn_event(game)
             start_time = game.get("date", "")
+            game_id = game.get("id", "")
             
             # Parse time
             if start_time:
                 from datetime import datetime
                 game_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-                time_str = game_time.strftime("%I:%M %p ET")
+                time_str = game_time.strftime("%a %I:%M %p ET")
             else:
                 time_str = "TBD"
             
-            with st.expander(f"🏀 {away} @ {home} - {time_str}"):
-                st.caption("**Projected Player Props - Build Your Parlay**")
+            # Matchup expander
+            with st.expander(f"🏀 {away} @ {home} • {time_str}", expanded=(game_idx == 0)):
+                st.markdown(f"**Build Parlay for This Game** • Game ID: {game_id}")
                 
                 # Get rosters for both teams
-                home_team_name = home.split()[-1]  # Get team name
+                home_team_name = home.split()[-1]  # Get last word (team name)
                 away_team_name = away.split()[-1]
                 
-                prop_cols = st.columns(2)
-                with prop_cols[0]:
-                    st.markdown(f"**{away} Players**")
-                    away_players = get_player_props(away_team_name, "NBA")
-                    for player in away_players[:3]:  # Show top 3
-                        player_name = player['name']
-                        # Use projected lines
-                        pts_line, pts_proj, _ = get_player_projected_line(player_name, "Points", use_projected=True)
-                        reb_line, reb_proj, _ = get_player_projected_line(player_name, "Rebounds", use_projected=True)
-                        ast_line, ast_proj, _ = get_player_projected_line(player_name, "Assists", use_projected=True)
-                        
-                        st.markdown(f"**{player_name}**")
-                        prop_cols_inner = st.columns(3)
-                        with prop_cols_inner[0]:
-                            st.caption(f"Pts: {pts_proj:.1f}")
-                        with prop_cols_inner[1]:
-                            st.caption(f"Reb: {reb_proj:.1f}")
-                        with prop_cols_inner[2]:
-                            st.caption(f"Ast: {ast_proj:.1f}")
+                # Create two columns for away and home teams
+                matchup_cols = st.columns(2)
                 
-                with prop_cols[1]:
-                    st.markdown(f"**{home} Players**")
+                with matchup_cols[0]:
+                    st.markdown(f"#### 🏀 {away} (Away)")
+                    away_players = get_player_props(away_team_name, "NBA")
+                    
+                    if away_players:
+                        for player in away_players[:6]:  # Top 6 players
+                            player_name = player['name']
+                            
+                            # Get projected lines with ESPN data if available
+                            pts_line, pts_current = get_betting_line(player_name, 'Points')
+                            reb_line, reb_current = get_betting_line(player_name, 'Rebounds')
+                            ast_line, ast_current = get_betting_line(player_name, 'Assists')
+                            
+                            # Calculate odds for each prop
+                            # Base probability: 52% (fair line)
+                            pts_prob = 52.0
+                            reb_prob = 52.0
+                            ast_prob = 52.0
+                            
+                            # Adjust based on recent performance
+                            if pts_current > 0:
+                                pts_ratio = pts_current / pts_line if pts_line > 0 else 1.0
+                                if pts_ratio > 1.1:
+                                    pts_prob = 60.0
+                                elif pts_ratio > 0.95:
+                                    pts_prob = 55.0
+                                else:
+                                    pts_prob = 48.0
+                            
+                            if reb_current > 0:
+                                reb_ratio = reb_current / reb_line if reb_line > 0 else 1.0
+                                if reb_ratio > 1.1:
+                                    reb_prob = 60.0
+                                elif reb_ratio > 0.95:
+                                    reb_prob = 55.0
+                                else:
+                                    reb_prob = 48.0
+                            
+                            if ast_current > 0:
+                                ast_ratio = ast_current / ast_line if ast_line > 0 else 1.0
+                                if ast_ratio > 1.1:
+                                    ast_prob = 60.0
+                                elif ast_ratio > 0.95:
+                                    ast_prob = 55.0
+                                else:
+                                    ast_prob = 48.0
+                            
+                            # Convert probability to American odds
+                            def prob_to_american_odds(prob):
+                                if prob >= 50:
+                                    return int(-100 * prob / (100 - prob))
+                                else:
+                                    return int(100 * (100 - prob) / prob)
+                            
+                            pts_odds = prob_to_american_odds(pts_prob)
+                            reb_odds = prob_to_american_odds(reb_prob)
+                            ast_odds = prob_to_american_odds(ast_prob)
+                            
+                            # Display player card
+                            st.markdown(f"**{player_name}**")
+                            prop_display = st.columns([2, 1])
+                            
+                            with prop_display[0]:
+                                st.caption(f"📊 Pts: {pts_line:.1f} (Avg: {pts_current:.1f}) • {pts_odds:+d}")
+                                st.caption(f"📊 Reb: {reb_line:.1f} (Avg: {reb_current:.1f}) • {reb_odds:+d}")
+                                st.caption(f"📊 Ast: {ast_line:.1f} (Avg: {ast_current:.1f}) • {ast_odds:+d}")
+                            
+                            with prop_display[1]:
+                                # Add buttons for each stat
+                                if st.button("➕ Pts", key=f"add_pts_{game_idx}_{player_name}_away", use_container_width=True):
+                                    st.session_state.parlay_legs.append({
+                                        'player': player_name,
+                                        'team': away,
+                                        'stat': 'Points',
+                                        'line': pts_line,
+                                        'over_under': 'Over',
+                                        'odds': pts_odds,
+                                        'probability': pts_prob,
+                                        'risk': 'Medium' if pts_prob > 50 else 'High',
+                                        'matchup': f"{away} @ {home}",
+                                        'game_time': time_str
+                                    })
+                                    st.rerun()
+                            
+                            st.markdown("---")
+                    else:
+                        st.caption("No player data available")
+                
+                with matchup_cols[1]:
+                    st.markdown(f"#### 🏀 {home} (Home)")
                     home_players = get_player_props(home_team_name, "NBA")
-                    for player in home_players[:3]:  # Show top 3
-                        player_name = player['name']
-                        # Use projected lines
-                        pts_line, pts_proj, _ = get_player_projected_line(player_name, "Points", use_projected=True)
-                        reb_line, reb_proj, _ = get_player_projected_line(player_name, "Rebounds", use_projected=True)
-                        ast_line, ast_proj, _ = get_player_projected_line(player_name, "Assists", use_projected=True)
-                        
-                        st.markdown(f"**{player_name}**")
-                        prop_cols_inner = st.columns(3)
-                        with prop_cols_inner[0]:
-                            st.caption(f"Pts: {pts_proj:.1f}")
-                        with prop_cols_inner[1]:
-                            st.caption(f"Reb: {reb_proj:.1f}")
-                        with prop_cols_inner[2]:
-                            st.caption(f"Ast: {ast_proj:.1f}")
-        except:
+                    
+                    if home_players:
+                        for player in home_players[:6]:  # Top 6 players
+                            player_name = player['name']
+                            
+                            # Get projected lines with ESPN data if available
+                            pts_line, pts_current = get_betting_line(player_name, 'Points')
+                            reb_line, reb_current = get_betting_line(player_name, 'Rebounds')
+                            ast_line, ast_current = get_betting_line(player_name, 'Assists')
+                            
+                            # Calculate odds (same logic as away team)
+                            pts_prob = 52.0
+                            reb_prob = 52.0
+                            ast_prob = 52.0
+                            
+                            if pts_current > 0:
+                                pts_ratio = pts_current / pts_line if pts_line > 0 else 1.0
+                                if pts_ratio > 1.1:
+                                    pts_prob = 60.0
+                                elif pts_ratio > 0.95:
+                                    pts_prob = 55.0
+                                else:
+                                    pts_prob = 48.0
+                            
+                            if reb_current > 0:
+                                reb_ratio = reb_current / reb_line if reb_line > 0 else 1.0
+                                if reb_ratio > 1.1:
+                                    reb_prob = 60.0
+                                elif reb_ratio > 0.95:
+                                    reb_prob = 55.0
+                                else:
+                                    reb_prob = 48.0
+                            
+                            if ast_current > 0:
+                                ast_ratio = ast_current / ast_line if ast_line > 0 else 1.0
+                                if ast_ratio > 1.1:
+                                    ast_prob = 60.0
+                                elif ast_ratio > 0.95:
+                                    ast_prob = 55.0
+                                else:
+                                    ast_prob = 48.0
+                            
+                            pts_odds = prob_to_american_odds(pts_prob)
+                            reb_odds = prob_to_american_odds(reb_prob)
+                            ast_odds = prob_to_american_odds(ast_prob)
+                            
+                            # Display player card
+                            st.markdown(f"**{player_name}**")
+                            prop_display = st.columns([2, 1])
+                            
+                            with prop_display[0]:
+                                st.caption(f"📊 Pts: {pts_line:.1f} (Avg: {pts_current:.1f}) • {pts_odds:+d}")
+                                st.caption(f"📊 Reb: {reb_line:.1f} (Avg: {reb_current:.1f}) • {reb_odds:+d}")
+                                st.caption(f"📊 Ast: {ast_line:.1f} (Avg: {ast_current:.1f}) • {ast_odds:+d}")
+                            
+                            with prop_display[1]:
+                                # Add buttons for each stat
+                                if st.button("➕ Pts", key=f"add_pts_{game_idx}_{player_name}_home", use_container_width=True):
+                                    st.session_state.parlay_legs.append({
+                                        'player': player_name,
+                                        'team': home,
+                                        'stat': 'Points',
+                                        'line': pts_line,
+                                        'over_under': 'Over',
+                                        'odds': pts_odds,
+                                        'probability': pts_prob,
+                                        'risk': 'Medium' if pts_prob > 50 else 'High',
+                                        'matchup': f"{away} @ {home}",
+                                        'game_time': time_str
+                                    })
+                                    st.rerun()
+                            
+                            st.markdown("---")
+                    else:
+                        st.caption("No player data available")
+        
+        except Exception as e:
+            st.error(f"Error loading game: {str(e)}")
             pass
 else:
-    st.info("📅 No upcoming games found - Showing current rosters with season averages", icon="ℹ️")
+    st.info("📅 No upcoming games found - Check back later for matchups", icon="ℹ️")
+
+st.markdown("---")
+
+# LEGACY UPCOMING GAMES SECTION (kept for reference - can be hidden)
+with st.expander("📅 Quick View: All Upcoming Games", expanded=False):
+    if upcoming_games:
+        for game in upcoming_games[:3]:
+            try:
+                away, home, _, _, status = parse_espn_event(game)
+                start_time = game.get("date", "")
+                
+                # Parse time
+                if start_time:
+                    from datetime import datetime
+                    game_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                    time_str = game_time.strftime("%I:%M %p ET")
+                else:
+                    time_str = "TBD"
+                
+                st.caption(f"🏀 {away} @ {home} - {time_str}")
 
 st.markdown("---")
 
