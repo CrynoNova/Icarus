@@ -1584,8 +1584,60 @@ with api_status_cols[2]:
 st.markdown("## 🎯 Build Your Winning Parlay")
 st.caption("📊 Add legs • Watch real-time progress • Get AI recommendations • Calculate win probability")
 
-# Data accuracy info
+# Data accuracy info with explanation
 st.info("🔴 = Live ESPN data | ✅ = Database player | ⚪ = Fallback | 📡 ESPN APIs queried for all stats", icon="ℹ️")
+
+# Data source explanation
+data_explainer = st.expander("📊 Understanding Your Data Sources", expanded=False)
+with data_explainer:
+    st.markdown("""
+    ### 🎯 How We Provide The Most Accurate Data
+    
+    **Your data comes from 3 sources, prioritized for accuracy:**
+    
+    #### 🔴 **LIVE ESPN Data** (Real-Time - When Games Are Active)
+    - Pulled directly from ESPN's live game APIs every 30 seconds
+    - Shows actual in-game performance as it happens
+    - Updates player stats in real-time during active games
+    - **You'll see this:** When games are currently being played
+    
+    #### ✅ **Curated Database** (Season Averages - 400+ Athletes)
+    - Professional-grade season statistics for 400+ players
+    - Accurate averages used by sportsbooks for betting lines
+    - Updated regularly with season performance data
+    - **You'll see this:** When games haven't started or are finished
+    
+    #### ⚪ **Calculated Fallback** (Statistical Projections)
+    - Used only when player isn't in our database
+    - Based on league averages and historical trends
+    - **You'll see this:** Rarely, for newer or lesser-known players
+    
+    ---
+    
+    ### 📅 **Why Am I Seeing Database Stats Right Now?**
+    
+    If you're seeing ✅ badges instead of 🔴 LIVE badges, it's because:
+    - **Today's games have finished** (all games showing "post" status)
+    - **No games are currently active** (between game days)
+    - **Games haven't started yet** (pre-game status)
+    
+    **This is normal and expected!** You're seeing accurate season averages which are what sportsbooks use to set lines.
+    
+    ### ⚡ **When Will I See Live Data?**
+    
+    Live ESPN data (🔴) appears automatically when:
+    - NBA games are actively being played (status: "in progress")
+    - Players are currently on the court
+    - Stats are being updated in real-time by ESPN
+    
+    **Check "Upcoming Matchups" below** to see when the next games start. When those games go live, you'll see 🔴 LIVE badges appear automatically!
+    
+    ---
+    
+    💡 **Pro Tip:** Our database stats are the SAME data sportsbooks use for betting lines. They're highly accurate and perfect for building parlays on upcoming games!
+    """)
+
+st.markdown("---")
 
 # ========================================
 # UPCOMING MATCHUPS PARLAY BUILDER - NEW FEATURE
