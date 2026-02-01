@@ -1226,8 +1226,8 @@ else:
 
 st.markdown("---")
 
-# Parlay Builder Form with Nested Tabs (Sport → Team → Player)
-with st.expander("➕ Add Leg to Parlay", expanded=len(st.session_state.parlay_legs) == 0):
+# BUILD A PARLAY - Enhanced with Real-Time Odds & Risk Indicators
+with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len(st.session_state.parlay_legs) == 0):
     # Sport Level Tabs
     sport_tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚽ Soccer", "⚾ MLB", "🏒 NHL", "🥊 UFC", "🎾 Tennis"])
     
@@ -1483,7 +1483,34 @@ with st.expander("➕ Add Leg to Parlay", expanded=len(st.session_state.parlay_l
         with col8:
             pace = st.selectbox("⚡ Game Pace", ["Low", "Medium", "High"], index=1, key="parlay_pace")
         
-        if st.button("🎯 Add to Parlay", type="primary", use_container_width=True):
+        # Calculate individual leg probability and risk
+        try:
+            leg_probability = 50.0  # Base probability
+            
+            # Adjust based on current vs line
+            if betting_line > 0:
+                performance_ratio = float(current_value) / float(betting_line)
+                if performance_ratio >= 1.2:
+                    leg_probability = 75.0  # Way ahead
+                elif performance_ratio >= 1.0:
+                    leg_probability = 65.0  # On track
+                elif performance_ratio >= 0.8:
+                    leg_probability = 50.0  # Close
+                else:
+                    leg_probability = 35.0  # Behind
+            
+            # Risk calculation
+            risk_level = "Low" if leg_probability > 60 else "Medium" if leg_probability > 45 else "High"
+            risk_color = "🟢" if risk_level == "Low" else "🟡" if risk_level == "Medium" else "🔴"
+            
+            # Display risk indicator
+            st.markdown(f"### {risk_color} Risk Level: {risk_level} • Win Probability: {leg_probability:.0f}%")
+            
+        except:
+            leg_probability = 50.0
+            risk_color = "🟡"
+        
+        if st.button(f"{risk_color} Add to Parlay", type="primary", use_container_width=True):
             try:
                 st.session_state.parlay_legs.append({
                     'player': st.session_state.selected_player_parlay,
@@ -1492,9 +1519,11 @@ with st.expander("➕ Add Leg to Parlay", expanded=len(st.session_state.parlay_l
                     'current': float(current_value) if current_value is not None else 0.0,
                     'odds': int(odds_input),
                     'game_time': game_time,
-                    'pace': pace
+                    'pace': pace,
+                    'probability': leg_probability,
+                    'risk': risk_level
                 })
-                st.success(f"✅ Added {st.session_state.selected_player_parlay} {stat_type} O/U {betting_line:.1f} to parlay!")
+                st.success(f"✅ Added {st.session_state.selected_player_parlay} {stat_type} O/U {betting_line:.1f} • {risk_color} {risk_level} Risk!")
                 # Clear selection and refresh
                 if 'selected_player_parlay' in st.session_state:
                     del st.session_state.selected_player_parlay
@@ -1622,15 +1651,51 @@ if st.session_state.parlay_legs:
         
         st.divider()
         
-        # Individual Legs - Cleaner Display
-        st.markdown("#### 🎯 Leg-by-Leg Breakdown")
+        # Individual Legs - Enhanced with Real-Time Odds & Risk Colors
+        st.markdown("#### 🎯 Leg-by-Leg Breakdown - Real-Time Analysis")
         for idx, leg in enumerate(st.session_state.parlay_legs):
+            # Calculate current leg probability and risk
+            try:
+                if leg['line'] > 0:
+                    performance_ratio = float(leg['current']) / float(leg['line'])
+                    if performance_ratio >= 1.2:
+                        leg_prob = 75.0
+                    elif performance_ratio >= 1.0:
+                        leg_prob = 65.0
+                    elif performance_ratio >= 0.8:
+                        leg_prob = 50.0
+                    else:
+                        leg_prob = 35.0
+                else:
+                    leg_prob = 50.0
+                
+                leg_risk = "Low" if leg_prob > 60 else "Medium" if leg_prob > 45 else "High"
+                leg_color = "🟢" if leg_risk == "Low" else "🟡" if leg_risk == "Medium" else "🔴"
+                
+                # Calculate implied odds from probability
+                if leg_prob > 0:
+                    decimal_odds = 100 / leg_prob
+                    if decimal_odds >= 2:
+                        american = int((decimal_odds - 1) * 100)
+                    else:
+                        american = int(-100 / (decimal_odds - 1))
+                else:
+                    american = leg.get('odds', -110)
+            except:
+                leg_prob = 50.0
+                leg_risk = "Medium"
+                leg_color = "🟡"
+                american = leg.get('odds', -110)
+            
+            # Color-coded container based on risk
             with st.container(border=True):
-                leg_header = st.columns([4, 1])
+                leg_header = st.columns([5, 2, 1])
                 with leg_header[0]:
-                    st.markdown(f"**Leg {idx + 1}: {leg['player']}**")
+                    st.markdown(f"**{leg_color} Leg {idx + 1}: {leg['player']}** • {leg['stat']}")
                 with leg_header[1]:
-                    if st.button("🗑️ Remove", key=f"remove_{idx}", use_container_width=True):
+                    st.markdown(f"**Odds: {american:+d}** • Prob: {leg_prob:.0f}%")
+                with leg_header[2]:
+                    if st.button("🗑️", key=f"remove_{idx}", use_container_width=True):
                         st.session_state.parlay_legs.pop(idx)
                         st.rerun()
                 
@@ -1638,15 +1703,30 @@ if st.session_state.parlay_legs:
                 
                 with leg_cols[0]:
                     progress = min(leg['current'] / leg['line'], 1.0) if leg['line'] > 0 else 0
-                    st.markdown(f"📊 **{leg['stat']}** | {leg['game_time']} | {leg['pace']} Pace")
-                    st.progress(progress, text=f"{leg['current']}/{leg['line']} ({progress*100:.0f}%)")
+                    
+                    # Color-coded display based on progress
+                    if progress >= 1.0:
+                        st.markdown(f"📊 :green[**{leg['stat']}**] | {leg['game_time']} | {leg['pace']} Pace")
+                        st.progress(progress, text=f"🟢 {leg['current']}/{leg['line']} ({progress*100:.0f}%) - HITTING!")
+                    elif progress >= 0.8:
+                        st.markdown(f"📊 :orange[**{leg['stat']}**] | {leg['game_time']} | {leg['pace']} Pace")
+                        st.progress(progress, text=f"🟡 {leg['current']}/{leg['line']} ({progress*100:.0f}%) - On pace")
+                    else:
+                        st.markdown(f"📊 :red[**{leg['stat']}**] | {leg['game_time']} | {leg['pace']} Pace")
+                        st.progress(progress, text=f"🔴 {leg['current']}/{leg['line']} ({progress*100:.0f}%) - Tracking...")
                     
                     # Projection
                     time_factor = {'Q1': 0.25, 'Q2': 0.5, 'Q3': 0.75, 'Q4': 0.95, '1H': 0.5, '2H': 0.95, 'Final': 1.0}.get(leg.get('game_time', 'Q2'), 0.5)
                     pace_boost = {'High': 1.25, 'Medium': 1.0, 'Low': 0.8}.get(leg.get('pace', 'Medium'), 1.0)
-                    if time_factor > 0 and leg['current'] > 0:
+                    if time_factor > 0 and time_factor < 1.0 and leg['current'] > 0:
                         projected = leg['current'] + (leg['current'] / time_factor) * (1 - time_factor) * pace_boost
-                        st.caption(f"📈 Projected: {projected:.1f} ({projected - leg['line']:+.1f} vs line)")
+                        proj_diff = projected - leg['line']
+                        if proj_diff >= 5:
+                            st.caption(f"📈 :green[Projected: {projected:.1f} ({proj_diff:+.1f} vs line)]")
+                        elif proj_diff >= 0:
+                            st.caption(f"📈 :orange[Projected: {projected:.1f} ({proj_diff:+.1f} vs line)]")
+                        else:
+                            st.caption(f"📈 :red[Projected: {projected:.1f} ({proj_diff:+.1f} vs line)]")
                 
                 with leg_cols[1]:
                     st.metric("Odds", f"{leg['odds']:+d}")
