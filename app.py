@@ -1087,37 +1087,63 @@ def fetch_all_live_games():
     return result
 
 @st.cache_data(ttl=300)
-def fetch_upcoming_games(sport="basketball", league="nba"):
-    """Fetch upcoming scheduled games from ESPN API"""
+def fetch_upcoming_games(sport="basketball", league="nba", days_ahead=7):
+    """Fetch upcoming scheduled games from ESPN API for next N days"""
+    from datetime import datetime, timedelta
+    
+    all_upcoming = []
+    
     try:
+        # Determine base URL
         if sport == "basketball" and league == "nba":
-            url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+            base_url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         elif sport == "football" and league == "nfl":
-            url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+            base_url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
         elif sport == "soccer":
-            url = "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard"
+            base_url = "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard"
         elif sport == "baseball" and league == "mlb":
-            url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
+            base_url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
         elif sport == "hockey" and league == "nhl":
-            url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
+            base_url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
         else:
             return []
         
-        response = requests.get(url, timeout=5)
+        # Check today first
+        today = datetime.now()
+        response = requests.get(base_url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             events = data.get("events", [])
-            upcoming = []
-            
             for event in events:
                 status = event.get("status", {}).get("type", {})
                 status_state = status.get("state", "")
-                
-                # Filter for upcoming games (pre-game status)
                 if status_state in ["pre", "scheduled"]:
-                    upcoming.append(event)
+                    all_upcoming.append(event)
+        
+        # Check next N days using dates parameter
+        for i in range(1, days_ahead + 1):
+            future_date = today + timedelta(days=i)
+            date_str = future_date.strftime("%Y%m%d")
+            url_with_date = f"{base_url}?dates={date_str}"
             
-            return upcoming
+            try:
+                response = requests.get(url_with_date, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    events = data.get("events", [])
+                    for event in events:
+                        status = event.get("status", {}).get("type", {})
+                        status_state = status.get("state", "")
+                        # Include pre-game and scheduled games
+                        if status_state in ["pre", "scheduled"]:
+                            # Avoid duplicates
+                            event_id = event.get("id", "")
+                            if not any(e.get("id") == event_id for e in all_upcoming):
+                                all_upcoming.append(event)
+            except:
+                continue
+        
+        return all_upcoming
     except:
         pass
     
@@ -1560,14 +1586,16 @@ st.info("🔴 = Live ESPN data | ✅ = Database player | ⚪ = Fallback | 📡 E
 st.markdown("### 🏀 Upcoming Matchups - Build Multi-Leg Parlays")
 st.caption("Select games below to see player props and build parlays from upcoming matchups")
 
-upcoming_games = fetch_upcoming_games("basketball", "nba")
+# Fetch upcoming games with progress indicator
+with st.spinner("🔄 Fetching upcoming NBA games from ESPN API (checking next 7 days)..."):
+    upcoming_games = fetch_upcoming_games("basketball", "nba", days_ahead=7)
 
 if upcoming_games:
     # Show number of upcoming games
-    st.success(f"📅 {len(upcoming_games)} upcoming NBA games with projected props", icon="🎯")
+    st.success(f"📅 {len(upcoming_games)} upcoming NBA games found over the next 7 days", icon="🎯")
     
     # Create expandable cards for each matchup
-    for game_idx, game in enumerate(upcoming_games[:8]):  # Show up to 8 games
+    for game_idx, game in enumerate(upcoming_games[:12]):  # Show up to 12 games
         try:
             away, home, _, _, status = parse_espn_event(game)
             start_time = game.get("date", "")
@@ -1763,7 +1791,16 @@ if upcoming_games:
             st.error(f"Error loading game: {str(e)}")
             pass
 else:
-    st.info("📅 No upcoming games found - Check back later for matchups", icon="ℹ️")
+    st.warning("📅 No upcoming NBA games found in the next 7 days", icon="⚠️")
+    st.caption("ESPN API checked - Try refreshing or checking back later. The API may be down or no games are scheduled.")
+    
+    # Debug info
+    with st.expander("🔍 Debug Info"):
+        st.text(f"Checked dates: {[(datetime.now() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(1, 8)]}")
+        st.text("API Endpoint: https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
+        if st.button("🔄 Force Refresh"):
+            st.cache_data.clear()
+            st.rerun()
 
 st.markdown("---")
 
