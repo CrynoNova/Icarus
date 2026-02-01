@@ -907,25 +907,25 @@ BETTING_LINES = {
 }
 
 def get_betting_line(player_name, stat_type):
-    """Fetch betting line for player - DATABASE FIRST (most accurate), then ESPN"""
-    # FIRST: Check database (most accurate - manually curated)
+    """Fetch betting line for player - ESPN LIVE FIRST (most accurate), then database"""
+    # FIRST: Try ESPN API for live/recent games (most accurate real-time data)
+    try:
+        live_stats = get_live_player_stats_from_scoreboard(player_name)
+        if live_stats and stat_type in live_stats:
+            line = live_stats.get(stat_type)
+            current = live_stats.get("current", {}).get(stat_type, int(line * 0.85))
+            if line and line > 0:  # Valid live data
+                return line, current
+    except:
+        pass
+    
+    # SECOND: Check database (curated season averages)
     if player_name in BETTING_LINES:
         player_data = BETTING_LINES[player_name]
         line = player_data.get(stat_type)
         current = player_data.get("current", {}).get(stat_type, 0)
         if line is not None:
             return line, current
-    
-    # SECOND: Try ESPN API for live games only
-    try:
-        real_stats = get_nba_player_stats(player_name, "")
-        if real_stats and stat_type in real_stats:
-            line = real_stats.get(stat_type)
-            current = real_stats.get("current", {}).get(stat_type, int(line * 0.75))
-            if line > 0:  # Valid data
-                return line, current
-    except Exception as e:
-        pass
     
     # LAST: Default fallback
     return 15.0, 12.0
@@ -1191,6 +1191,57 @@ def get_nba_team_roster(team_id):
         pass
     return []
 
+@st.cache_data(ttl=180)  # Cache for 3 minutes
+def get_team_live_stats(team_name):
+    """Get all players from a team currently in live/recent games"""
+    try:
+        scoreboard_url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+        response = requests.get(scoreboard_url, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get("events", [])
+            
+            for event in events:
+                game_id = event.get("id")
+                competitions = event.get("competitions", [{}])[0]
+                competitors = competitions.get("competitors", [])
+                
+                # Check if this team is playing
+                for competitor in competitors:
+                    team = competitor.get("team", {})
+                    if team_name.lower() in team.get("displayName", "").lower() or team_name.lower() in team.get("name", "").lower():
+                        # Found team! Get boxscore
+                        boxscore_url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}"
+                        box_response = requests.get(boxscore_url, timeout=5)
+                        
+                        if box_response.status_code == 200:
+                            box_data = box_response.json()
+                            boxscore = box_data.get("boxscore", {}).get("players", [])
+                            
+                            players_stats = []
+                            for team_data in boxscore:
+                                team_info = team_data.get("team", {})
+                                if team_name.lower() in team_info.get("displayName", "").lower():
+                                    for stat_group in team_data.get("statistics", []):
+                                        for athlete in stat_group.get("athletes", []):
+                                            athlete_info = athlete.get("athlete", {})
+                                            name = athlete_info.get("displayName", "")
+                                            stats = athlete.get("stats", [])
+                                            
+                                            if len(stats) > 13 and name:
+                                                players_stats.append({
+                                                    "name": name,
+                                                    "pts": float(stats[13]) if stats[13] else 0,
+                                                    "reb": float(stats[6]) if stats[6] else 0,
+                                                    "ast": float(stats[7]) if stats[7] else 0
+                                                })
+                            
+                            return players_stats[:12]  # Return top 12
+    except:
+        pass
+    return []
+
 @st.cache_data(ttl=60)  # Cache for 1 minute for live games
 def get_live_player_stats(player_name, game_id=None):
     """Fetch live player stats from ESPN API if game is in progress"""
@@ -1225,6 +1276,66 @@ def get_live_player_stats(player_name, game_id=None):
                                                     "Rebounds": float(stats[1]) if stats[1].replace('.','').isdigit() else 0,
                                                     "Assists": float(stats[2]) if stats[2].replace('.','').isdigit() else 0
                                                 }
+    except:
+        pass
+    return None
+
+@st.cache_data(ttl=60)  # Cache for 1 minute
+def get_live_player_stats_from_scoreboard(player_name):
+    """Fetch real-time player stats from ESPN scoreboard - ALL live & recent games"""
+    try:
+        scoreboard_url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+        response = requests.get(scoreboard_url, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get("events", [])
+            
+            # Search through all games for player
+            for event in events:
+                game_id = event.get("id")
+                status_state = event.get("status", {}).get("type", {}).get("state", "")
+                
+                # Check live and completed games
+                if status_state in ["in", "post"]:
+                    # Fetch boxscore for this game
+                    boxscore_url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}"
+                    box_response = requests.get(boxscore_url, timeout=5)
+                    
+                    if box_response.status_code == 200:
+                        box_data = box_response.json()
+                        boxscore = box_data.get("boxscore", {}).get("players", [])
+                        
+                        for team_data in boxscore:
+                            for stat_group in team_data.get("statistics", []):
+                                athletes = stat_group.get("athletes", [])
+                                for athlete in athletes:
+                                    athlete_info = athlete.get("athlete", {})
+                                    name = athlete_info.get("displayName", "")
+                                    
+                                    if name.lower() == player_name.lower():
+                                        stats = athlete.get("stats", [])
+                                        # Stats array: [0]=MIN, [1]=FG, [2]=3PT, [6]=REB, [7]=AST, [8]=STL, [9]=BLK, [13]=PTS
+                                        if len(stats) > 13:
+                                            pts = float(stats[13]) if stats[13] else 0
+                                            reb = float(stats[6]) if stats[6] else 0
+                                            ast = float(stats[7]) if stats[7] else 0
+                                            threes = stats[2].split('-')[0] if '-' in str(stats[2]) else 0
+                                            
+                                            return {
+                                                "Points": pts,
+                                                "Rebounds": reb,
+                                                "Assists": ast,
+                                                "3-Pointers": float(threes) if threes else 0,
+                                                "Steals": float(stats[8]) if len(stats) > 8 and stats[8] else 0,
+                                                "Blocks": float(stats[9]) if len(stats) > 9 and stats[9] else 0,
+                                                "current": {
+                                                    "Points": int(pts),
+                                                    "Rebounds": int(reb),
+                                                    "Assists": int(ast)
+                                                },
+                                                "source": "ESPN_LIVE"
+                                            }
     except:
         pass
     return None
@@ -1349,7 +1460,7 @@ st.markdown("---")
 # Database Status Check (primary data source)
 api_status_cols = st.columns([2, 1, 1])
 with api_status_cols[0]:
-    st.caption("🔗 **Data Sources:** 🏆 Curated Database (200+ Athletes) • 📡 ESPN API (Live Games)")
+    st.caption("🔗 **Data Priority:** 📡 ESPN Live APIs (Primary) • 🏆 Curated Database (Backup) • 🔴 Real-Time Preferred")
 with api_status_cols[1]:
     # Show database status
     player_count = len(BETTING_LINES)
@@ -1372,7 +1483,7 @@ st.markdown("## 🎯 Build Your Winning Parlay")
 st.caption("📊 Add legs • Watch real-time progress • Get AI recommendations • Calculate win probability")
 
 # Data accuracy info
-st.info("✅ = Verified player in database | ⚠️ = Fallback data | All 200+ athletes have accurate 2025-26 stats", icon="ℹ️")
+st.info("🔴 = Live ESPN data | ✅ = Database player | ⚪ = Fallback | 📡 ESPN APIs queried for all stats", icon="ℹ️")
 
 # UPCOMING GAMES SECTION - Show next games with projected lines
 st.markdown("### 📅 Upcoming Games - Build Your Parlay")
@@ -1468,20 +1579,40 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                 # Use our curated roster from team_players mapping
                 players = get_player_props(team, "NBA")
                 if players:
+                    # Check for live ESPN data
+                    live_team_data = get_team_live_stats(team)
+                    has_live_data = len(live_team_data) > 0
+                    
                     # Show data source indicator
-                    data_source = "🏆 Database" if any(p['name'] in BETTING_LINES for p in players) else "📡 API"
-                    st.caption(f"📋 {len(players)} players • {data_source}")
+                    if has_live_data:
+                        st.caption(f"🔴 LIVE • 📋 {len(players)} players • 📡 ESPN Real-Time Data")
+                    else:
+                        data_source = "🏆 Database" if any(p['name'] in BETTING_LINES for p in players) else "📡 API"
+                        st.caption(f"📋 {len(players)} players • {data_source} • Season Averages")
+                    
                     for player in players:
-                        # Get real-time stats for player
+                        # Try to get ESPN live data first
+                        live_stats = get_live_player_stats_from_scoreboard(player['name'])
+                        
+                        # Get real-time stats for player (prioritizes ESPN)
                         player_line, player_current = get_betting_line(player['name'], 'Points')
+                        
                         col1, col2, col3 = st.columns([3, 1, 1])
                         with col1:
-                            # Show verified checkmark if in database
-                            verified = "✅" if player['name'] in BETTING_LINES else "⚠️"
-                            if st.button(f"{verified} {player['name']}", key=f"nba_{team}_{player['name']}", use_container_width=True):
+                            # Show data source badge
+                            if live_stats and live_stats.get('source') == 'ESPN_LIVE':
+                                badge = "🔴"  # Live ESPN data
+                            elif player['name'] in BETTING_LINES:
+                                badge = "✅"  # Verified database
+                            else:
+                                badge = "⚪"  # Fallback
+                            
+                            if st.button(f"{badge} {player['name']}", key=f"nba_{team}_{player['name']}", use_container_width=True):
                                 selected_player = player['name']
                         with col2:
-                            st.caption(f"📊 {player_current} pts")
+                            # Show current with data source
+                            source_icon = "🔴" if live_stats else "📊"
+                            st.caption(f"{source_icon} {player_current} pts")
                         with col3:
                             st.caption(f"📈 {player_line} O/U")
                 else:
