@@ -1,9 +1,6 @@
 import streamlit as st
 import requests
-from nba_api.stats.static import teams as nba_teams
-import pandas as pd
 from datetime import datetime, timedelta
-import time
 
 # PAGE CONFIG - Mobile Optimized
 st.set_page_config(
