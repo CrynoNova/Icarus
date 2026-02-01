@@ -2440,109 +2440,303 @@ with tabs[6]:
 st.markdown("---")
 
 # PARLAY RESEARCH - Live game data to inform decisions
-st.markdown("## 📡 Live Games & Player Props")
+st.markdown("## 📡 Live Games & Player Props - Real-Time Data")
 live_update_time = datetime.now().strftime('%I:%M:%S %p')
 st.caption(f"🔴 LIVE • Updated {live_update_time} • Auto-refresh every 30s • 🎯 Click ➕ to add players to parlay")
 
 # Quick refresh button for live games
-if st.button("⚡ Refresh Live Games", type="secondary"):
-    st.cache_data.clear()
-    st.rerun()
+col_refresh1, col_refresh2 = st.columns([1, 5])
+with col_refresh1:
+    if st.button("⚡ Refresh", type="secondary", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
-# Compact live games display - focused on getting data quickly
-live_games = fetch_all_live_games()
+# Fetch real-time NBA games from ESPN
+try:
+    nba_url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+    nba_response = requests.get(nba_url, timeout=5)
+    live_nba_games = []
+    
+    if nba_response.status_code == 200:
+        nba_data = nba_response.json()
+        events = nba_data.get("events", [])
+        live_nba_games = [e for e in events if e.get("status", {}).get("type", {}).get("state", "") in ["in", "post"]]
+        st.info(f"📊 Found {len(live_nba_games)} active NBA games • Real-time boxscore data enabled", icon="🏀")
+except:
+    live_nba_games = []
 
-game_sport_tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚽ Soccer", "⚾ MLB", "🏒 NHL", "🥊 UFC", "🎾 Tennis"])
+game_sport_tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚽ Soccer", "⚾ MLB", "🏒 NHL"])
 
-# NBA Live Games
+# NBA Live Games with Real Boxscore Data
 with game_sport_tabs[0]:
-    st.caption(f"🔴 LIVE NBA • {datetime.now().strftime('%I:%M:%S %p')}")
-    nba_games = live_games.get("nba", [])
-    if nba_games:
-        st.success(f"✅ {len(nba_games)} live games found • Real-time stats updating")
-        for idx, event in enumerate(nba_games[:5]):  # Show top 5 games
+    st.caption(f"🔴 LIVE NBA • Updated: {datetime.now().strftime('%I:%M:%S %p')}")
+    
+    if live_nba_games:
+        st.success(f"✅ {len(live_nba_games)} live/recent games • Real-time boxscore stats", icon="🏀")
+        
+        for idx, event in enumerate(live_nba_games[:5]):  # Show top 5 games
             try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_id = event.get("id", f"game_{idx}")
+                game_id = event.get("id", "")
+                competitions = event.get("competitions", [{}])[0]
+                competitors = competitions.get("competitors", [])
                 
-                # Enhanced game header with live indicator
-                game_status = "🔴 LIVE" if "in progress" in status.lower() or "qtr" in status.lower() else status
-                with st.expander(f"🏀 {away_team} ({away_score}) vs {home_team} ({home_score}) - {game_status}", expanded=idx==0):
-                    st.caption(f"📡 Real-time data • Game ID: {game_id} • Auto-updating every 30s")
+                if len(competitors) >= 2:
+                    away_data = competitors[1]
+                    home_data = competitors[0]
                     
-                    # Get players for both teams with live data
-                    home_props = get_player_props_with_live_data(home_team, "NBA", game_id)
-                    away_props = get_player_props_with_live_data(away_team, "NBA", game_id)
+                    away_team = away_data.get("team", {}).get("displayName", "Away")
+                    home_team = home_data.get("team", {}).get("displayName", "Home")
+                    away_score = away_data.get("score", "0")
+                    home_score = home_data.get("score", "0")
                     
-                    all_props = home_props + away_props
+                    # Status
+                    status_data = event.get("status", {})
+                    status_type = status_data.get("type", {})
+                    is_live = status_type.get("state", "") == "in"
+                    is_final = status_type.get("state", "") == "post"
                     
-                    if all_props:
-                        st.markdown("**🌟 Top Players - Live Stats**")
-                        for player in all_props[:6]:  # Top 6 players
-                            with st.container(border=True):
-                                prop_cols = st.columns([2, 1, 1, 1, 1])
-                                with prop_cols[0]:
-                                    st.markdown(f"**{player['name']}**")
-                                    team_name = player.get('team', 'Unknown')
-                                    st.caption(f"🔵 {team_name}")
-                                with prop_cols[1]:
-                                    pts = player.get('pts', 0)
-                                    pts_line = player.get('pts_line', 20.5)
-                                    progress = min(pts/pts_line, 1.0) if pts_line > 0 else 0
-                                    status_icon = "✅" if pts >= pts_line else "📈"
-                                    st.metric(f"{status_icon} PTS", f"{pts}/{pts_line}")
-                                    st.progress(progress)
-                                with prop_cols[2]:
-                                    reb = player.get('reb', 0)
-                                    reb_line = player.get('reb_line', 8.5)
-                                    st.metric("🔄 REB", f"{reb}/{reb_line}")
-                                with prop_cols[3]:
-                                    ast = player.get('ast', 0)
-                                    ast_line = player.get('ast_line', 5.5)
-                                    st.metric("🎯 AST", f"{ast}/{ast_line}")
-                                with prop_cols[4]:
-                                    if st.button("➕ Add", key=f"add_nba_{game_id}_{player['name']}_pts", use_container_width=True):
-                                        st.session_state.parlay_legs.append({
-                                            'player': player['name'],
-                                            'stat': 'Points',
-                                            'line': pts_line,
-                                            'current': pts,
-                                            'odds': -110,
-                                            'game_time': 'Q2',
-                                            'pace': 'Medium'
-                                        })
-                                        st.success(f"✅ Added {player['name']} Points to parlay!")
-                                        st.rerun()
+                    if is_live:
+                        period = status_data.get("period", 1)
+                        clock = status_data.get("displayClock", "12:00")
+                        status_badge = f"🔴 Q{period} - {clock}"
+                    elif is_final:
+                        status_badge = "✅ FINAL"
                     else:
-                        st.info(f"⏳ Loading live data for {home_team} vs {away_team}...")
-            except Exception as e:
-                pass
-    else:
-        st.info("🏀 No live NBA games - Check back on game days!")
-
-# Other sports - enhanced with live indicators
-with game_sport_tabs[1]:
-    st.caption(f"🔴 LIVE NFL • {datetime.now().strftime('%I:%M:%S %p')}")
-    nfl_games = live_games.get("nfl", [])
-    if nfl_games:
-        st.success(f"✅ {len(nfl_games)} live NFL games • Real-time scores")
-        for idx, event in enumerate(nfl_games[:3]):
-            try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_status = "🔴 LIVE" if "in progress" in status.lower() or "qtr" in status.lower() else status
-                st.markdown(f"**🏈 {away_team} ({away_score}) @ {home_team} ({home_score})** - {game_status}")
-                st.divider()
+                        status_badge = "⏰ SCHEDULED"
+                    
+                    # Game expander with enhanced header
+                    with st.expander(f"{status_badge} | {away_team} {away_score} @ {home_team} {home_score}", expanded=idx==0 and is_live):
+                        st.markdown(f"#### 🏀 {away_team} @ {home_team}")
+                        st.caption(f"📡 Real-time ESPN boxscore data • Game ID: {game_id}")
+                        
+                        # Fetch detailed boxscore data
+                        if game_id and (is_live or is_final):
+                            try:
+                                boxscore_url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}"
+                                box_response = requests.get(boxscore_url, timeout=5)
+                                
+                                if box_response.status_code == 200:
+                                    box_data = box_response.json()
+                                    boxscore = box_data.get("boxscore", {})
+                                    players_data = boxscore.get("players", [])
+                                    
+                                    st.markdown(f"#### 📊 Live Player Stats" + (" 🔴" if is_live else " ✅"))
+                                    
+                                    # Display both teams
+                                    team_cols = st.columns(2)
+                                    
+                                    for team_idx, team_players in enumerate(players_data[:2]):
+                                        team_name = team_players.get("team", {}).get("displayName", "")
+                                        statistics = team_players.get("statistics", [])
+                                        
+                                        with team_cols[team_idx]:
+                                            st.markdown(f"**{team_name}**")
+                                            
+                                            if statistics:
+                                                for stat_group in statistics:
+                                                    athletes = stat_group.get("athletes", [])
+                                                    
+                                                    for athlete in athletes[:6]:  # Top 6 per team
+                                                        athlete_info = athlete.get("athlete", {})
+                                                        player_name = athlete_info.get("displayName", "")
+                                                        
+                                                        # Parse actual game stats
+                                                        stats = athlete.get("stats", [])
+                                                        if len(stats) >= 14:
+                                                            try:
+                                                                min_played = str(stats[0]) if stats[0] else "0"
+                                                                pts = int(float(stats[13]) if stats[13] else 0)
+                                                                reb = int(float(stats[6]) if stats[6] else 0)
+                                                                ast = int(float(stats[7]) if stats[7] else 0)
+                                                                fg = str(stats[1]) if stats[1] else "0-0"
+                                                                threes = str(stats[2]) if stats[2] else "0-0"
+                                                                stl = int(float(stats[8]) if stats[8] else 0)
+                                                                blk = int(float(stats[9]) if stats[9] else 0)
+                                                                
+                                                                # Get database lines for comparison
+                                                                pts_line = BETTING_LINES.get(player_name, {}).get("Points", 0)
+                                                                reb_line = BETTING_LINES.get(player_name, {}).get("Rebounds", 0)
+                                                                ast_line = BETTING_LINES.get(player_name, {}).get("Assists", 0)
+                                                                
+                                                                # Display with live indicators
+                                                                with st.container(border=True):
+                                                                    st.markdown(f"**{player_name}** • {min_played} min")
+                                                                    
+                                                                    stat_cols = st.columns([2, 2, 1])
+                                                                    
+                                                                    with stat_cols[0]:
+                                                                        # Points with comparison
+                                                                        if pts_line > 0:
+                                                                            pts_diff = pts - pts_line
+                                                                            if pts >= pts_line:
+                                                                                st.metric("PTS", pts, delta=f"✅ {pts_diff:+.0f}", delta_color="normal")
+                                                                            else:
+                                                                                st.metric("PTS", pts, delta=f"{pts_diff:+.0f} vs {pts_line:.1f}", delta_color="inverse")
+                                                                        else:
+                                                                            st.metric("PTS", pts)
+                                                                        st.caption(f"FG: {fg} | 3PT: {threes}")
+                                                                    
+                                                                    with stat_cols[1]:
+                                                                        # Rebounds and Assists
+                                                                        reb_status = "✅" if reb >= reb_line and reb_line > 0 else "📊"
+                                                                        ast_status = "✅" if ast >= ast_line and ast_line > 0 else "📊"
+                                                                        st.write(f"{reb_status} **REB:** {reb}" + (f" ({reb - reb_line:+.0f})" if reb_line > 0 else ""))
+                                                                        st.write(f"{ast_status} **AST:** {ast}" + (f" ({ast - ast_line:+.0f})" if ast_line > 0 else ""))
+                                                                        st.caption(f"STL: {stl} | BLK: {blk}")
+                                                                    
+                                                                    with stat_cols[2]:
+                                                                        # Quick add buttons with actual stats
+                                                                        if st.button("➕", key=f"live_add_{game_id}_{player_name}_{team_idx}", help="Add to parlay"):
+                                                                            # Determine best prop to add
+                                                                            line_val = pts_line if pts_line > 0 else round_to_betting_line(float(pts))
+                                                                            
+                                                                            st.session_state.parlay_legs.append({
+                                                                                'player': player_name,
+                                                                                'stat': 'Points',
+                                                                                'line': line_val,
+                                                                                'current': float(pts),
+                                                                                'odds': -110,
+                                                                                'game_time': status_badge if is_live else 'Final',
+                                                                                'pace': 'Medium',
+                                                                                'probability': 75.0 if pts >= pts_line else 50.0,
+                                                                                'risk': 'Low' if pts >= pts_line else 'Medium'
+                                                                            })
+                                                                            st.success(f"✅ Added!")
+                                                                            st.rerun()
+                                                            except:
+                                                                pass
+                                else:
+                                    st.info("📊 Loading boxscore data...")
+                            except:
+                                st.warning("⚠️ Unable to fetch detailed stats")
+                        else:
+                            st.info("📊 Stats available when game is live or completed")
             except:
                 pass
     else:
-        st.info("🏈 No live NFL games")
+        st.info("🏀 No live NBA games right now - Check upcoming games section above!", icon="📅")
+
+# Other sports tabs with real ESPN data feeds
+with game_sport_tabs[1]:
+    st.caption(f"🔴 LIVE NFL • {datetime.now().strftime('%I:%M:%S %p')}")
+    try:
+        nfl_url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
+        nfl_response = requests.get(nfl_url, timeout=5)
+        if nfl_response.status_code == 200:
+            nfl_data = nfl_response.json()
+            nfl_events = nfl_data.get("events", [])
+            live_nfl = [e for e in nfl_events if e.get("status", {}).get("type", {}).get("state", "") in ["in", "post"]]
+            
+            if live_nfl:
+                st.success(f"✅ {len(live_nfl)} active NFL games", icon="🏈")
+                for idx, event in enumerate(live_nfl[:3]):
+                    competitions = event.get("competitions", [{}])[0]
+                    competitors = competitions.get("competitors", [])
+                    if len(competitors) >= 2:
+                        away = competitors[1].get("team", {}).get("displayName", "Away")
+                        home = competitors[0].get("team", {}).get("displayName", "Home")
+                        away_score = competitors[1].get("score", "0")
+                        home_score = competitors[0].get("score", "0")
+                        status = event.get("status", {}).get("type", {}).get("detail", "")
+                        st.markdown(f"**🏈 {away} {away_score} @ {home} {home_score}** • {status}")
+                        st.divider()
+            else:
+                st.info("🏈 No live NFL games - Check back on game days!")
+        else:
+            st.info("🏈 Unable to fetch NFL data")
+    except:
+        st.info("🏈 NFL data temporarily unavailable")
 
 with game_sport_tabs[2]:
     st.caption(f"🔴 LIVE Soccer • {datetime.now().strftime('%I:%M:%S %p')}")
-    soccer_games = live_games.get("soccer", [])
-    if soccer_games:
-        st.success(f"✅ {len(soccer_games)} live matches • Real-time scores")
-        for idx, event in enumerate(soccer_games[:3]):
+    try:
+        # Try fetching soccer data (EPL)
+        soccer_url = "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard"
+        soccer_response = requests.get(soccer_url, timeout=5)
+        if soccer_response.status_code == 200:
+            soccer_data = soccer_response.json()
+            soccer_events = soccer_data.get("events", [])
+            live_soccer = [e for e in soccer_events if e.get("status", {}).get("type", {}).get("state", "") in ["in", "post"]]
+            
+            if live_soccer:
+                st.success(f"✅ {len(live_soccer)} active Premier League matches", icon="⚽")
+                for idx, event in enumerate(live_soccer[:3]):
+                    competitions = event.get("competitions", [{}])[0]
+                    competitors = competitions.get("competitors", [])
+                    if len(competitors) >= 2:
+                        away = competitors[1].get("team", {}).get("displayName", "Away")
+                        home = competitors[0].get("team", {}).get("displayName", "Home")
+                        away_score = competitors[1].get("score", "0")
+                        home_score = competitors[0].get("score", "0")
+                        status = event.get("status", {}).get("type", {}).get("detail", "")
+                        st.markdown(f"**⚽ {away} {away_score} @ {home} {home_score}** • {status}")
+                        st.divider()
+            else:
+                st.info("⚽ No live matches - Check back on match days!")
+        else:
+            st.info("⚽ Unable to fetch soccer data")
+    except:
+        st.info("⚽ Soccer data temporarily unavailable")
+
+with game_sport_tabs[3]:
+    st.caption(f"🔴 LIVE MLB • {datetime.now().strftime('%I:%M:%S %p')}")
+    try:
+        mlb_url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
+        mlb_response = requests.get(mlb_url, timeout=5)
+        if mlb_response.status_code == 200:
+            mlb_data = mlb_response.json()
+            mlb_events = mlb_data.get("events", [])
+            live_mlb = [e for e in mlb_events if e.get("status", {}).get("type", {}).get("state", "") in ["in", "post"]]
+            
+            if live_mlb:
+                st.success(f"✅ {len(live_mlb)} active MLB games", icon="⚾")
+                for idx, event in enumerate(live_mlb[:3]):
+                    competitions = event.get("competitions", [{}])[0]
+                    competitors = competitions.get("competitors", [])
+                    if len(competitors) >= 2:
+                        away = competitors[1].get("team", {}).get("displayName", "Away")
+                        home = competitors[0].get("team", {}).get("displayName", "Home")
+                        away_score = competitors[1].get("score", "0")
+                        home_score = competitors[0].get("score", "0")
+                        status = event.get("status", {}).get("type", {}).get("detail", "")
+                        st.markdown(f"**⚾ {away} {away_score} @ {home} {home_score}** • {status}")
+                        st.divider()
+            else:
+                st.info("⚾ No live games - Off-season or rest day")
+        else:
+            st.info("⚾ Unable to fetch MLB data")
+    except:
+        st.info("⚾ MLB data temporarily unavailable")
+
+with game_sport_tabs[4]:
+    st.caption(f"🔴 LIVE NHL • {datetime.now().strftime('%I:%M:%S %p')}")
+    try:
+        nhl_url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
+        nhl_response = requests.get(nhl_url, timeout=5)
+        if nhl_response.status_code == 200:
+            nhl_data = nhl_response.json()
+            nhl_events = nhl_data.get("events", [])
+            live_nhl = [e for e in nhl_events if e.get("status", {}).get("type", {}).get("state", "") in ["in", "post"]]
+            
+            if live_nhl:
+                st.success(f"✅ {len(live_nhl)} active NHL games", icon="🏒")
+                for idx, event in enumerate(live_nhl[:3]):
+                    competitions = event.get("competitions", [{}])[0]
+                    competitors = competitions.get("competitors", [])
+                    if len(competitors) >= 2:
+                        away = competitors[1].get("team", {}).get("displayName", "Away")
+                        home = competitors[0].get("team", {}).get("displayName", "Home")
+                        away_score = competitors[1].get("score", "0")
+                        home_score = competitors[0].get("score", "0")
+                        status = event.get("status", {}).get("type", {}).get("detail", "")
+                        st.markdown(f"**🏒 {away} {away_score} @ {home} {home_score}** • {status}")
+                        st.divider()
+            else:
+                st.info("🏒 No live games - Check back on game nights!")
+        else:
+            st.info("🏒 Unable to fetch NHL data")
+    except:
+        st.info("🏒 NHL data temporarily unavailable")
             try:
                 away_team, home_team, away_score, home_score, status = parse_espn_event(event)
                 game_status = "🔴 LIVE" if "in progress" in status.lower() else status
