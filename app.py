@@ -2311,6 +2311,20 @@ def get_nba_team_roster(team_id):
         pass
     return []
 
+def get_team_id_from_game(team_name, game_data):
+    """Extract team ID from game data"""
+    try:
+        competitions = game_data.get("competitions", [])
+        if competitions:
+            competitors = competitions[0].get("competitors", [])
+            for competitor in competitors:
+                team = competitor.get("team", {})
+                if team.get("displayName") == team_name or team.get("shortDisplayName") == team_name:
+                    return team.get("id", "")
+    except:
+        pass
+    return None
+
 @st.cache_data(ttl=60)  # Cache for 1 minute - more frequent updates
 def get_nfl_team_roster(team_id, max_retries=3):
     """Fetch actual NFL team roster from ESPN API with retry logic - NO FAKE DATA
@@ -3063,11 +3077,19 @@ with main_sport_tabs[0]:
                     
                     with matchup_cols[0]:
                         st.markdown(f"#### 🏀 {away} (Away)")
-                        away_players = get_player_props(away_team_name, "NBA")
+                        
+                        # Get team ID from game data
+                        away_team_id = get_team_id_from_game(away, game)
+                        if away_team_id:
+                            away_players_raw = get_nba_team_roster(away_team_id)
+                            # Convert to dict format expected by the rest of the code
+                            away_players = [{"name": p} for p in away_players_raw] if away_players_raw else []
+                        else:
+                            away_players = []
                         
                         if away_players:
-                            for player in away_players[:6]:  # Top 6 players
-                                player_name = player['name']
+                            for player_data in away_players[:8]:  # Top 8 healthy players
+                                player_name = player_data['name']
                                 
                                 # Use live stats if available, otherwise use projections
                                 if is_live and live_stats and player_name in live_stats:
@@ -3185,11 +3207,19 @@ with main_sport_tabs[0]:
                     
                     with matchup_cols[1]:
                         st.markdown(f"#### 🏀 {home} (Home)")
-                        home_players = get_player_props(home_team_name, "NBA")
+                        
+                        # Get team ID from game data
+                        home_team_id = get_team_id_from_game(home, game)
+                        if home_team_id:
+                            home_players_raw = get_nba_team_roster(home_team_id)
+                            # Convert to dict format expected by the rest of the code
+                            home_players = [{"name": p} for p in home_players_raw] if home_players_raw else []
+                        else:
+                            home_players = []
                         
                         if home_players:
-                            for player in home_players[:6]:  # Top 6 players
-                                player_name = player['name']
+                            for player_data in home_players[:8]:  # Top 8 healthy players
+                                player_name = player_data['name']
                                 
                                 # Use live stats if available, otherwise use projections
                                 if is_live and live_stats and player_name in live_stats:
@@ -6146,16 +6176,25 @@ with game_sport_tabs[0]:
                                     with team_cols[team_idx]:
                                         st.markdown(f"**{team_name}**")
                                         
-                                        # Get team abbr
-                                        team_short = team_name.split()[-1]
-                                        players = get_player_props(team_short, "NBA")
+                                        # Get team ID from event data
+                                        team_id = None
+                                        if team_idx == 0:  # Away team
+                                            team_id = competitors[1].get("team", {}).get("id", "")
+                                        else:  # Home team
+                                            team_id = competitors[0].get("team", {}).get("id", "")
+                                        
+                                        if team_id:
+                                            players_raw = get_nba_team_roster(team_id)
+                                            players = [{"name": p} for p in players_raw] if players_raw else []
+                                        else:
+                                            players = []
                                         
                                         if not players:
                                             st.caption("⚠️ Roster will load when game starts")
                                             continue
                                         
-                                        for player in players[:5]:
-                                            player_name = player['name']
+                                        for player_data in players[:5]:
+                                            player_name = player_data['name']
                                             
                                             if player_name in BETTING_LINES:
                                                 pts_line = BETTING_LINES[player_name].get("Points", 0)
@@ -6270,15 +6309,26 @@ with game_sport_tabs[1]:
                                 for team_idx, team_name in enumerate([away, home]):
                                     with team_cols[team_idx]:
                                         st.markdown(f"**{team_name}**")
-                                        team_short = team_name.split()[-1]
-                                        players = get_player_props(team_short, "NFL")
+                                        
+                                        # Get team ID from event data
+                                        team_id = None
+                                        if team_idx == 0:  # Away team
+                                            team_id = competitors[1].get("team", {}).get("id", "")
+                                        else:  # Home team
+                                            team_id = competitors[0].get("team", {}).get("id", "")
+                                        
+                                        if team_id:
+                                            players_raw = get_nfl_team_roster(team_id)
+                                            players = players_raw if players_raw else []
+                                        else:
+                                            players = []
                                         
                                         if not players:
                                             st.caption("⚠️ Roster will load when game starts")
                                             continue
                                         
-                                        for player in players[:3]:
-                                            player_name = player['name']
+                                        for player_data in players[:3]:
+                                            player_name = player_data['name']
                                             if player_name in BETTING_LINES:
                                                 pass_yds = BETTING_LINES[player_name].get("Passing Yards", 0)
                                                 rush_yds = BETTING_LINES[player_name].get("Rushing Yards", 0)
