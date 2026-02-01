@@ -1784,6 +1784,8 @@ with st.expander("📅 Quick View: All Upcoming Games", expanded=False):
                     time_str = "TBD"
                 
                 st.caption(f"🏀 {away} @ {home} - {time_str}")
+            except:
+                pass
 
 st.markdown("---")
 
