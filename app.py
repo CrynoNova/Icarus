@@ -2304,7 +2304,8 @@ def get_nba_team_roster(team_id):
                     # Double-check with injury API for comprehensive filtering
                     if player_name and is_active and not is_injured:
                         injury_check = get_injury_status(player_name, "NBA")
-                        if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                        # Only exclude players who are OUT (impact 0.0)
+                        if injury_check["status"] != "Out" and injury_check["impact"] > 0.0:
                             players.append(player_name)
             return players  # Return all healthy players
     except:
@@ -2363,7 +2364,8 @@ def get_nfl_team_roster(team_id, max_retries=3):
                         if player_name and position and is_active and not is_injured:
                             # Double-check with injury API
                             injury_check = get_injury_status(player_name, "NFL")
-                            if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                            # Only exclude OUT players
+                            if injury_check["status"] != "Out" and injury_check["impact"] > 0.0:
                                 players.append({
                                     "name": player_name, 
                                     "position": position,
@@ -2471,7 +2473,8 @@ def get_mlb_team_roster(team_id, max_retries=3):
                         if player_name and position and is_active and not is_injured:
                             # Double-check with injury API
                             injury_check = get_injury_status(player_name, "MLB")
-                            if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                            # Only exclude OUT players
+                            if injury_check["status"] != "Out" and injury_check["impact"] > 0.0:
                                 players.append({
                                     "name": player_name,
                                     "position": position,
@@ -2530,7 +2533,8 @@ def get_nhl_team_roster(team_id, max_retries=3):
                         if player_name and position and is_active and not is_injured:
                             # Double-check with injury API
                             injury_check = get_injury_status(player_name, "NHL")
-                            if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                            # Only exclude OUT players
+                            if injury_check["status"] != "Out" and injury_check["impact"] > 0.0:
                                 players.append({
                                     "name": player_name,
                                     "position": position,
@@ -3080,12 +3084,15 @@ with main_sport_tabs[0]:
                         
                         # Get team ID from game data
                         away_team_id = get_team_id_from_game(away, game)
+                        away_players = []
                         if away_team_id:
                             away_players_raw = get_nba_team_roster(away_team_id)
                             # Convert to dict format expected by the rest of the code
                             away_players = [{"name": p} for p in away_players_raw] if away_players_raw else []
-                        else:
-                            away_players = []
+                        
+                        # Fallback to hardcoded if API fails
+                        if not away_players:
+                            away_players = get_player_props(away.split()[-1], "NBA")
                         
                         if away_players:
                             for player_data in away_players[:8]:  # Top 8 healthy players
@@ -3210,12 +3217,15 @@ with main_sport_tabs[0]:
                         
                         # Get team ID from game data
                         home_team_id = get_team_id_from_game(home, game)
+                        home_players = []
                         if home_team_id:
                             home_players_raw = get_nba_team_roster(home_team_id)
                             # Convert to dict format expected by the rest of the code
                             home_players = [{"name": p} for p in home_players_raw] if home_players_raw else []
-                        else:
-                            home_players = []
+                        
+                        # Fallback to hardcoded if API fails
+                        if not home_players:
+                            home_players = get_player_props(home.split()[-1], "NBA")
                         
                         if home_players:
                             for player_data in home_players[:8]:  # Top 8 healthy players
