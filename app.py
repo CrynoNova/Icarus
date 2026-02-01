@@ -3321,8 +3321,11 @@ with main_sport_tabs[1]:
                                         
                                         # Display top 3 props in FanDuel-style cards
                                         prop_cols = st.columns(3)
-                                        for idx, stat in enumerate(stat_types):
+                                        for prop_idx, stat in enumerate(stat_types):
                                             line, current = get_nfl_betting_line(player_name, stat)
+                                            
+                                            # Sanitize stat for key (remove spaces)
+                                            stat_key = stat.replace(" ", "_")
                                             
                                             # ADVANCED ODDS CALCULATION using multiple factors
                                             is_home_team = False  # Away team
@@ -3336,7 +3339,7 @@ with main_sport_tabs[1]:
                                             # Determine if player is in database
                                             data_source = "✅" if player_name in NFL_BETTING_LINES else "⚪"
                                             
-                                            with prop_cols[idx]:
+                                            with prop_cols[prop_idx]:
                                                 # FanDuel-style prop card
                                                 st.markdown(f"""
                                                 <div style='text-align: center; padding: 0.5rem; background: #2d2d2d; 
@@ -3353,13 +3356,13 @@ with main_sport_tabs[1]:
                                                 # DraftKings-style Over/Under buttons with odds
                                                 over_btn = st.button(
                                                     f"O {over_odds:+d} ({over_prob}%)", 
-                                                    key=f"nfl_away_{game_idx}_{player_name}_{stat}_over", 
+                                                    key=f"nfl_away_{game_idx}_{player_idx}_{stat_key}_over", 
                                                     use_container_width=True,
                                                     type="secondary"
                                                 )
                                                 under_btn = st.button(
                                                     f"U {under_odds:+d} ({under_prob}%)", 
-                                                    key=f"nfl_away_{game_idx}_{player_name}_{stat}_under", 
+                                                    key=f"nfl_away_{game_idx}_{player_idx}_{stat_key}_under", 
                                                     use_container_width=True,
                                                     type="secondary"
                                                 )
@@ -3422,12 +3425,15 @@ with main_sport_tabs[1]:
                             if not top_players:
                                 st.warning(f"⚠️ No key players found for {home}. ESPN API may have incomplete roster data.")
                             
-                            for player in top_players[:15]:  # Show up to 15 players
+                            for player_idx, player in enumerate(top_players[:15]):  # Show up to 15 players
                                     player_name = player.get("name", "")
                                     position = player.get("position", "")
                                     
                                     if not player_name:
                                         continue
+                                    
+                                    # Sanitize player name for key (remove spaces and special chars)
+                                    player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "")
                                     
                                     # Position-specific stats
                                     if position == "QB":
@@ -3458,8 +3464,11 @@ with main_sport_tabs[1]:
                                         
                                         # Display top 3 props in FanDuel-style cards
                                         prop_cols = st.columns(3)
-                                        for idx, stat in enumerate(stat_types):
+                                        for prop_idx, stat in enumerate(stat_types):
                                             line, current = get_nfl_betting_line(player_name, stat)
+                                            
+                                            # Sanitize stat for key (remove spaces)
+                                            stat_key = stat.replace(" ", "_")
                                             
                                             # ADVANCED ODDS CALCULATION using multiple factors
                                             is_home_team = True  # Home team gets boost
@@ -3473,7 +3482,7 @@ with main_sport_tabs[1]:
                                             # Determine if player is in database
                                             data_source = "✅" if player_name in NFL_BETTING_LINES else "⚪"
                                             
-                                            with prop_cols[idx]:
+                                            with prop_cols[prop_idx]:
                                                 # FanDuel-style prop card
                                                 st.markdown(f"""
                                                 <div style='text-align: center; padding: 0.5rem; background: #2d2d2d; 
@@ -3490,13 +3499,13 @@ with main_sport_tabs[1]:
                                                 # DraftKings-style Over/Under buttons with odds
                                                 over_btn = st.button(
                                                     f"O {over_odds:+d} ({over_prob}%)", 
-                                                    key=f"nfl_home_{game_idx}_{player_name}_{stat}_over", 
+                                                    key=f"nfl_home_{game_idx}_{player_idx}_{stat_key}_over", 
                                                     use_container_width=True,
                                                     type="secondary"
                                                 )
                                                 under_btn = st.button(
                                                     f"U {under_odds:+d} ({under_prob}%)", 
-                                                    key=f"nfl_home_{game_idx}_{player_name}_{stat}_under", 
+                                                    key=f"nfl_home_{game_idx}_{player_idx}_{stat_key}_under", 
                                                     use_container_width=True,
                                                     type="secondary"
                                                 )
@@ -3739,10 +3748,14 @@ with main_sport_tabs[3]:
                                 for idx, stat_type in enumerate(stat_types):
                                     with prop_cols[idx]:
                                         line_value = 1.5 if stat_type == "Home Runs" else 6.5
+                                        # Sanitize stat_type for key (remove spaces)
+                                        stat_key = stat_type.replace(" ", "_")
+                                        # Sanitize player_name for key (remove spaces and special chars)
+                                        player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
                                         st.caption(f"{stat_type}: {line_value}")
-                                        if st.button(f"Over", key=f"mlb_over_{game_idx}_{player_name}_{stat_type}_away"):
+                                        if st.button(f"Over", key=f"mlb_over_{game_idx}_{player_key}_{stat_key}_{idx}_away"):
                                             st.success(f"Added {player_name} {stat_type} Over")
-                                        if st.button(f"Under", key=f"mlb_under_{game_idx}_{player_name}_{stat_type}_away"):
+                                        if st.button(f"Under", key=f"mlb_under_{game_idx}_{player_key}_{stat_key}_{idx}_away"):
                                             st.success(f"Added {player_name} {stat_type} Under")
                                 
                                 st.markdown("---")
@@ -3799,10 +3812,14 @@ with main_sport_tabs[3]:
                                 for idx, stat_type in enumerate(stat_types):
                                     with prop_cols[idx]:
                                         line_value = 1.5 if stat_type == "Home Runs" else 6.5
+                                        # Sanitize stat_type for key (remove spaces)
+                                        stat_key = stat_type.replace(" ", "_")
+                                        # Sanitize player_name for key (remove spaces and special chars)
+                                        player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
                                         st.caption(f"{stat_type}: {line_value}")
-                                        if st.button(f"Over", key=f"mlb_over_{game_idx}_{player_name}_{stat_type}_home"):
+                                        if st.button(f"Over", key=f"mlb_over_{game_idx}_{player_key}_{stat_key}_{idx}_home"):
                                             st.success(f"Added {player_name} {stat_type} Over")
-                                        if st.button(f"Under", key=f"mlb_under_{game_idx}_{player_name}_{stat_type}_home"):
+                                        if st.button(f"Under", key=f"mlb_under_{game_idx}_{player_key}_{stat_key}_{idx}_home"):
                                             st.success(f"Added {player_name} {stat_type} Under")
                                 
                                 st.markdown("---")
@@ -3923,10 +3940,14 @@ with main_sport_tabs[4]:
                                 for idx, stat_type in enumerate(stat_types):
                                     with prop_cols[idx]:
                                         line_value = 0.5 if stat_type == "Goals" else 2.5
+                                        # Sanitize stat_type for key (remove spaces)
+                                        stat_key = stat_type.replace(" ", "_")
+                                        # Sanitize player_name for key (remove spaces and special chars)
+                                        player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
                                         st.caption(f"{stat_type}: {line_value}")
-                                        if st.button(f"Over", key=f"nhl_over_{game_idx}_{player_name}_{stat_type}_away"):
+                                        if st.button(f"Over", key=f"nhl_over_{game_idx}_{player_key}_{stat_key}_{idx}_away"):
                                             st.success(f"Added {player_name} {stat_type} Over")
-                                        if st.button(f"Under", key=f"nhl_under_{game_idx}_{player_name}_{stat_type}_away"):
+                                        if st.button(f"Under", key=f"nhl_under_{game_idx}_{player_key}_{stat_key}_{idx}_away"):
                                             st.success(f"Added {player_name} {stat_type} Under")
                                 
                                 st.markdown("---")
@@ -3983,10 +4004,14 @@ with main_sport_tabs[4]:
                                 for idx, stat_type in enumerate(stat_types):
                                     with prop_cols[idx]:
                                         line_value = 0.5 if stat_type == "Goals" else 2.5
+                                        # Sanitize stat_type for key (remove spaces)
+                                        stat_key = stat_type.replace(" ", "_")
+                                        # Sanitize player_name for key (remove spaces and special chars)
+                                        player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
                                         st.caption(f"{stat_type}: {line_value}")
-                                        if st.button(f"Over", key=f"nhl_over_{game_idx}_{player_name}_{stat_type}_home"):
+                                        if st.button(f"Over", key=f"nhl_over_{game_idx}_{player_key}_{stat_key}_{idx}_home"):
                                             st.success(f"Added {player_name} {stat_type} Over")
-                                        if st.button(f"Under", key=f"nhl_under_{game_idx}_{player_name}_{stat_type}_home"):
+                                        if st.button(f"Under", key=f"nhl_under_{game_idx}_{player_key}_{stat_key}_{idx}_home"):
                                             st.success(f"Added {player_name} {stat_type} Under")
                                 
                                 st.markdown("---")
@@ -4087,6 +4112,9 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                         # Get real-time stats for player (prioritizes ESPN)
                         player_line, player_current = get_betting_line(player['name'], 'Points')
                         
+                        # Sanitize player name for key (remove spaces and special chars)
+                        player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                        
                         col1, col2, col3 = st.columns([3, 1, 1])
                         with col1:
                             # Show data source badge
@@ -4097,7 +4125,7 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                             else:
                                 badge = "⚪"  # Fallback
                             
-                            if st.button(f"{badge} {player['name']}", key=f"nba_{team}_{player['name']}", use_container_width=True):
+                            if st.button(f"{badge} {player['name']}", key=f"nba_{team}_{player_key}", use_container_width=True):
                                 selected_player = player['name']
                         with col2:
                             # Show current with data source
@@ -4131,7 +4159,9 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                 players = get_player_props(team, "Soccer")
                 if players:
                     for player in players:
-                        if st.button(f"👤 {player['name']}", key=f"soccer_{team}_{player['name']}", use_container_width=True):
+                        # Sanitize player name for key (remove spaces and special chars)
+                        player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                        if st.button(f"👤 {player['name']}", key=f"soccer_{team}_{player_key}", use_container_width=True):
                             selected_player = player['name']
     
     # MLB Tab
@@ -4157,7 +4187,9 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                 players = get_player_props(team, "NHL")
                 if players:
                     for player in players:
-                        if st.button(f"👤 {player['name']}", key=f"nhl_{team}_{player['name']}", use_container_width=True):
+                        # Sanitize player name for key (remove spaces and special chars)
+                        player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                        if st.button(f"👤 {player['name']}", key=f"nhl_{team}_{player_key}", use_container_width=True):
                             selected_player = player['name']
     
     # UFC Tab
@@ -4168,7 +4200,9 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
         fighter_cols = st.columns(2)
         for idx, fighter in enumerate(ufc_fighters):
             with fighter_cols[idx % 2]:
-                if st.button(f"👤 {fighter}", key=f"ufc_{fighter}", use_container_width=True):
+                # Sanitize fighter name for key (remove spaces and special chars)
+                fighter_key = fighter.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                if st.button(f"👤 {fighter}", key=f"ufc_{fighter_key}", use_container_width=True):
                     selected_player = fighter
     
     # Tennis Tab
@@ -4179,7 +4213,9 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
         tennis_cols = st.columns(2)
         for idx, player in enumerate(tennis_players):
             with tennis_cols[idx % 2]:
-                if st.button(f"👤 {player}", key=f"tennis_{player}", use_container_width=True):
+                # Sanitize player name for key (remove spaces and special chars)
+                player_key = player.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                if st.button(f"👤 {player}", key=f"tennis_{player_key}", use_container_width=True):
                     selected_player = player
     
     # If player selected, show stat selection and betting interface
