@@ -4367,7 +4367,6 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                 players = get_player_props(team, "NFL")
                 if players:
                     st.caption("📋 Quick browse - Check live games above for full rosters")
-                            selected_player = player['name']
     
     # Soccer Tab
     with sport_tabs[2]:
