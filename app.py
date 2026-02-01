@@ -888,7 +888,17 @@ def calculate_parlay_probability(legs):
     return parlay_prob, ev, risk
 
 def get_player_props(team, sport="NBA"):
-    """Generate player props from ESPN API with real stats"""
+    """DEPRECATED - DO NOT USE - This returns hardcoded/fake data
+    
+    Use instead:
+    - get_nba_team_roster(team_id) for NBA
+    - get_nfl_team_roster(team_id) for NFL
+    - get_mlb_team_roster(team_id) for MLB
+    - get_nhl_team_roster(team_id) for NHL
+    
+    All real roster functions include automatic injury filtering.
+    """
+    # Legacy hardcoded data - kept only for absolute emergency fallback
     # Map team names to relevant players from actual rosters
     team_players = {
         # NBA Teams - 2025-26 Season Complete Rosters (ALL PLAYERS)
@@ -2799,7 +2809,10 @@ def get_live_player_stats_from_scoreboard(player_name):
     return None
 
 def get_player_props_with_live_data(team, sport="NBA", game_id=None):
-    """Get player props with live stats if available"""
+    """DEPRECATED - DO NOT USE - Uses hardcoded data from get_player_props
+    
+    This function is no longer used. Live stats are now fetched directly in game sections.
+    """
     # Get base player data
     players = get_player_props(team, sport)
     
@@ -3090,10 +3103,6 @@ with main_sport_tabs[0]:
                             # Convert to dict format expected by the rest of the code
                             away_players = [{"name": p} for p in away_players_raw] if away_players_raw else []
                         
-                        # Fallback to hardcoded if API fails
-                        if not away_players:
-                            away_players = get_player_props(away.split()[-1], "NBA")
-                        
                         # CRITICAL: Filter out injured players from ANY source
                         if away_players:
                             filtered_away = []
@@ -3233,10 +3242,6 @@ with main_sport_tabs[0]:
                             home_players_raw = get_nba_team_roster(home_team_id)
                             # Convert to dict format expected by the rest of the code
                             home_players = [{"name": p} for p in home_players_raw] if home_players_raw else []
-                        
-                        # Fallback to hardcoded if API fails
-                        if not home_players:
-                            home_players = get_player_props(home.split()[-1], "NBA")
                         
                         # CRITICAL: Filter out injured players from ANY source
                         if home_players:
@@ -4420,64 +4425,23 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
     
     # NFL Tab
     with sport_tabs[1]:
-        st.info("🏈 Browse by team - Real rosters load in game sections above")
-        nfl_teams = ["Chiefs", "Bills", "49ers", "Dolphins", "Ravens", "Eagles", "Bengals", "Vikings",
-                    "Cowboys", "Giants", "Raiders", "Jets", "Lions", "Packers", "Titans", "Chargers"]
-        team_tabs_nfl = st.tabs(nfl_teams)
-        for idx, team in enumerate(nfl_teams):
-            with team_tabs_nfl[idx]:
-                players = get_player_props(team, "NFL")
-                if players:
-                    st.caption("📋 Quick browse - Check live games above for full rosters")
+        st.info("🏈 Real NFL rosters load in live game sections above - Check 'Game Analysis' tab for active games")
+        st.caption("📡 All player data pulled from ESPN API with real-time injury status")
     
     # Soccer Tab
     with sport_tabs[2]:
-        st.info("⚽ Browse top players - Real rosters load in live game sections above")
-        soccer_teams = ["Man City", "Liverpool", "Arsenal", "Chelsea", "Real Madrid", "Barcelona", 
-                       "Bayern Munich", "PSG", "Inter Milan", "AC Milan"]
-        team_tabs_soccer = st.tabs(soccer_teams)
-        for idx, team in enumerate(soccer_teams):
-            with team_tabs_soccer[idx]:
-                players = get_player_props(team, "Soccer")
-                if players:
-                    st.caption("📋 Quick browse - Check live games for full squads")
-                    for player in players:
-                        # Sanitize player name for key (remove spaces and special chars)
-                        player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
-                        if st.button(f"👤 {player['name']}", key=f"soccer_{team}_{player_key}", use_container_width=True):
-                            selected_player = player['name']
+        st.info("⚽ Soccer rosters load in live game sections above when matches are active")
+        st.caption("📡 Match data from ESPN Soccer API • Check 'Game Analysis' tab during match days")
     
     # MLB Tab
     with sport_tabs[3]:
-        st.info("⚾ Browse by team - Real rosters load in game sections above")
-        mlb_teams = ["Dodgers", "Yankees", "Braves", "Astros", "Mariners", "Blue Jays", "Phillies", 
-                    "Padres", "Angels", "Mets", "Red Sox", "Rangers", "Brewers", "Marlins"]
-        team_tabs_mlb = st.tabs(mlb_teams)
-        for idx, team in enumerate(mlb_teams):
-            with team_tabs_mlb[idx]:
-                players = get_player_props(team, "MLB")
-                if players:
-                    st.caption("📋 Quick browse - Check live games for full rosters")
-                    for player in players:
-                        if st.button(f"👤 {player['name']}", key=f"mlb_{team}_{player['name']}", use_container_width=True):
-                            selected_player = player['name']
+        st.info("⚾ Real MLB rosters load in live game sections above - Check 'Game Analysis' tab for active games")
+        st.caption("📡 All player data pulled from ESPN MLB API with real-time injury status")
     
     # NHL Tab
     with sport_tabs[4]:
-        st.info("🏒 Browse by team - Real rosters load in game sections above")
-        nhl_teams = ["Oilers", "Maple Leafs", "Avalanche", "Bruins", "Lightning", "Panthers", 
-                    "Rangers", "Devils", "Jets", "Wild", "Penguins", "Capitals", "Canucks", "Senators", "Stars"]
-        team_tabs_nhl = st.tabs(nhl_teams)
-        for idx, team in enumerate(nhl_teams):
-            with team_tabs_nhl[idx]:
-                players = get_player_props(team, "NHL")
-                if players:
-                    st.caption("📋 Quick browse - Check live games for full rosters")
-                    for player in players:
-                        # Sanitize player name for key (remove spaces and special chars)
-                        player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
-                        if st.button(f"👤 {player['name']}", key=f"nhl_{team}_{player_key}", use_container_width=True):
-                            selected_player = player['name']
+        st.info("🏒 Real NHL rosters load in live game sections above - Check 'Game Analysis' tab for active games")
+        st.caption("📡 All player data pulled from ESPN NHL API with real-time injury status")
     
     # UFC Tab
     with sport_tabs[5]:
