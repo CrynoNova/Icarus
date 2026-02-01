@@ -2661,13 +2661,11 @@ with game_sport_tabs[0]:
                                                                         'odds': -110,
                                                                         'game_time': status_badge if is_live else 'Final',
                                                                         'pace': 'Medium',
-                                                                                'probability': 75.0 if pts >= pts_line else 50.0,
-                                                                                'risk': 'Low' if pts >= pts_line else 'Medium'
-                                                                            })
-                                                                            st.success(f"✅ Added!")
-                                                                            st.rerun()
-                                                            except:
-                                                                pass
+                                                                        'probability': 75.0 if pts >= pts_line else 50.0,
+                                                                        'risk': 'Low' if pts >= pts_line else 'Medium'
+                                                                    })
+                                                                    st.success(f"✅ Added!")
+                                                                    st.rerun()
                                 else:
                                     st.info("📊 Loading boxscore data...")
                             except:
