@@ -200,36 +200,133 @@ def calculate_parlay_probability(legs):
 
 def get_player_props(team, sport="NBA"):
     """Generate realistic player props based on sport and team"""
-    # Map team names to relevant players
+    # Map team names to relevant players from actual rosters
     team_players = {
-        # NBA
+        # NBA Teams
         "Lakers": ["LeBron James", "Anthony Davis"],
-        "Warriors": ["Stephen Curry", "Kevin Durant"],
+        "Warriors": ["Stephen Curry"],
         "Celtics": ["Jayson Tatum"],
         "76ers": ["Joel Embiid"],
         "Nuggets": ["Nikola Jokic"],
         "Bucks": ["Giannis Antetokounmpo", "Damian Lillard"],
-        "Mavericks": ["Luka Doncic"],
-        # NFL
+        "Mavericks": ["Luka Doncic", "Kyrie Irving"],
+        "Suns": ["Kevin Durant", "Devin Booker"],
+        "Clippers": ["Kawhi Leonard", "Paul George"],
+        "Heat": ["Jimmy Butler", "Bam Adebayo"],
+        "Grizzlies": ["Ja Morant"],
+        "Cavaliers": ["Donovan Mitchell"],
+        "Thunder": ["Shai Gilgeous-Alexander"],
+        "Hawks": ["Trae Young"],
+        "Kings": ["De'Aaron Fox"],
+        "Pelicans": ["Zion Williamson"],
+        "Timberwolves": ["Karl-Anthony Towns"],
+        "Pacers": ["Tyrese Haliburton"],
+        "Knicks": ["Jalen Brunson"],
+        "Magic": ["Paolo Banchero", "Franz Wagner"],
+        "Spurs": ["Victor Wembanyama"],
+        "Rockets": ["Alperen Sengun"],
+        "Raptors": ["Scottie Barnes"],
+        
+        # NFL Teams
         "Chiefs": ["Patrick Mahomes", "Travis Kelce"],
-        "Bills": ["Josh Allen"],
-        "49ers": ["Christian McCaffrey"],
-        "Dolphins": ["Tyreek Hill"],
+        "Bills": ["Josh Allen", "Stefon Diggs"],
+        "49ers": ["Christian McCaffrey", "Brock Purdy"],
+        "Dolphins": ["Tyreek Hill", "Tua Tagovailoa"],
         "Ravens": ["Lamar Jackson"],
-        # Soccer
-        "Man City": ["Erling Haaland", "Kevin De Bruyne"],
-        "Arsenal": ["Mohamed Salah"],
-        "Bayern Munich": ["Harry Kane"],
-        "PSG": ["Kylian Mbappe"],
-        # MLB
-        "Dodgers": ["Shohei Ohtani", "Mookie Betts"],
-        "Yankees": ["Aaron Judge"],
-        "Braves": ["Ronald Acuna Jr"],
-        # NHL
+        "Eagles": ["Jalen Hurts"],
+        "Bengals": ["Joe Burrow", "Ja'Marr Chase"],
+        "Vikings": ["Justin Jefferson"],
+        "Cowboys": ["CeeDee Lamb", "Dak Prescott"],
+        "Giants": ["Saquon Barkley"],
+        "Raiders": ["Davante Adams"],
+        "Jets": ["Garrett Wilson"],
+        "Lions": ["Amon-Ra St. Brown"],
+        "Packers": ["Jordan Love"],
+        "Titans": ["Derrick Henry"],
+        "Chargers": ["Josh Jacobs"],
+        
+        # Soccer Teams - Premier League
+        "Man City": ["Erling Haaland", "Kevin De Bruyne", "Phil Foden"],
+        "Manchester City": ["Erling Haaland", "Kevin De Bruyne", "Phil Foden"],
+        "Liverpool": ["Mohamed Salah"],
+        "Bayern Munich": ["Harry Kane", "Leroy Sane"],
+        "Arsenal": ["Bukayo Saka", "Martin Odegaard"],
+        "Tottenham": ["Son Heung-min"],
+        "Aston Villa": ["Ollie Watkins"],
+        "Chelsea": ["Cole Palmer", "Raheem Sterling"],
+        
+        # Soccer - La Liga
+        "Real Madrid": ["Kylian Mbappe", "Vinicius Junior", "Jude Bellingham", "Rodrygo"],
+        "Barcelona": ["Robert Lewandowski", "Lamine Yamal"],
+        "Atletico Madrid": ["Antoine Griezmann"],
+        
+        # Soccer - Bundesliga
+        "Bayer Leverkusen": ["Florian Wirtz"],
+        "Bayern": ["Harry Kane", "Leroy Sane"],
+        "Bayern München": ["Harry Kane", "Leroy Sane"],
+        
+        # Soccer - Serie A
+        "Napoli": ["Victor Osimhen"],
+        "Inter Milan": ["Lautaro Martinez"],
+        "AC Milan": ["Rafael Leao"],
+        "Roma": ["Paulo Dybala"],
+        
+        # Soccer - Ligue 1
+        "PSG": ["Kylian Mbappe", "Ousmane Dembele", "Bradley Barcola"],
+        "Paris Saint-Germain": ["Kylian Mbappe", "Ousmane Dembele", "Bradley Barcola"],
+        "Lyon": ["Alexandre Lacazette"],
+        
+        # Soccer - International
+        "Al Nassr": ["Cristiano Ronaldo"],
+        "Al Hilal": ["Neymar"],
+        
+        # MLB Teams
+        "Dodgers": ["Shohei Ohtani", "Mookie Betts", "Freddie Freeman"],
+        "Yankees": ["Aaron Judge", "Juan Soto"],
+        "Braves": ["Ronald Acuna Jr", "Matt Olson"],
+        "Astros": ["Jose Altuve", "Yordan Alvarez"],
+        "Mariners": ["Julio Rodriguez"],
+        "Blue Jays": ["Bo Bichette", "Vladimir Guerrero Jr"],
+        "Phillies": ["Bryce Harper", "Trea Turner"],
+        "Padres": ["Fernando Tatis Jr"],
+        "Angels": ["Mike Trout"],
+        "Mets": ["Pete Alonso"],
+        "Red Sox": ["Rafael Devers"],
+        "Rangers": ["Corey Seager", "Marcus Semien"],
+        "Brewers": ["Corbin Burnes"],
+        "Marlins": ["Sandy Alcantara"],
+        
+        # NHL Teams
         "Oilers": ["Connor McDavid", "Leon Draisaitl"],
+        "Edmonton Oilers": ["Connor McDavid", "Leon Draisaitl"],
         "Maple Leafs": ["Auston Matthews"],
-        "Avalanche": ["Nathan MacKinnon"],
+        "Toronto Maple Leafs": ["Auston Matthews"],
+        "Avalanche": ["Nathan MacKinnon", "Cale Makar"],
+        "Colorado Avalanche": ["Nathan MacKinnon", "Cale Makar"],
         "Bruins": ["David Pastrnak"],
+        "Boston Bruins": ["David Pastrnak"],
+        "Lightning": ["Nikita Kucherov"],
+        "Tampa Bay Lightning": ["Nikita Kucherov"],
+        "Panthers": ["Matthew Tkachuk"],
+        "Florida Panthers": ["Matthew Tkachuk"],
+        "Rangers": ["Artemi Panarin", "Igor Shesterkin"],
+        "New York Rangers": ["Artemi Panarin", "Igor Shesterkin"],
+        "Devils": ["Jack Hughes"],
+        "New Jersey Devils": ["Jack Hughes"],
+        "Jets": ["Connor Hellebuyck"],
+        "Winnipeg Jets": ["Connor Hellebuyck"],
+        "Wild": ["Kirill Kaprizov"],
+        "Minnesota Wild": ["Kirill Kaprizov"],
+        "Penguins": ["Sidney Crosby"],
+        "Pittsburgh Penguins": ["Sidney Crosby"],
+        "Capitals": ["Alex Ovechkin"],
+        "Washington Capitals": ["Alex Ovechkin"],
+        "Canucks": ["Elias Pettersson"],
+        "Vancouver Canucks": ["Elias Pettersson"],
+        "Senators": ["Tim Stutzle"],
+        "Ottawa Senators": ["Tim Stutzle"],
+        "Stars": ["Jason Robertson"],
+        "Dallas Stars": ["Jason Robertson"],
     }
     
     # Get players for this team, or return random players
@@ -291,9 +388,9 @@ def get_player_props(team, sport="NBA"):
         {"name": "Player 1", "pts": 25.5, "reb": 7.5, "ast": 5.5, "current_pts": 20, "current_reb": 6, "current_ast": 4}
     ]
 
-# Betting Lines Database - Simulates live sportsbook data
+# GLOBAL BETTING LINES DATABASE - 150+ Athletes Worldwide
 BETTING_LINES = {
-    # NBA Players
+    # ============ NBA PLAYERS (30+ Players) ============
     "Stephen Curry": {"Points": 28.5, "Rebounds": 5.5, "Assists": 6.5, "3-Pointers": 4.5, "current": {"Points": 24, "Rebounds": 4, "Assists": 7}},
     "LeBron James": {"Points": 25.5, "Rebounds": 7.5, "Assists": 8.5, "3-Pointers": 2.5, "current": {"Points": 22, "Rebounds": 8, "Assists": 6}},
     "Giannis Antetokounmpo": {"Points": 31.5, "Rebounds": 11.5, "Assists": 5.5, "Blocks": 1.5, "current": {"Points": 28, "Rebounds": 10, "Assists": 6}},
@@ -304,48 +401,181 @@ BETTING_LINES = {
     "Nikola Jokic": {"Points": 26.5, "Rebounds": 12.5, "Assists": 9.5, "Blocks": 0.5, "current": {"Points": 24, "Rebounds": 11, "Assists": 10}},
     "Damian Lillard": {"Points": 26.5, "Rebounds": 4.5, "Assists": 7.5, "3-Pointers": 4.5, "current": {"Points": 28, "Rebounds": 3, "Assists": 8}},
     "Anthony Davis": {"Points": 24.5, "Rebounds": 12.5, "Assists": 3.5, "Blocks": 2.5, "current": {"Points": 21, "Rebounds": 13, "Assists": 2}},
+    "Kawhi Leonard": {"Points": 24.5, "Rebounds": 6.5, "Assists": 4.5, "Steals": 1.5, "current": {"Points": 26, "Rebounds": 7, "Assists": 3}},
+    "Jimmy Butler": {"Points": 22.5, "Rebounds": 6.5, "Assists": 5.5, "Steals": 1.5, "current": {"Points": 20, "Rebounds": 7, "Assists": 6}},
+    "Devin Booker": {"Points": 27.5, "Rebounds": 4.5, "Assists": 6.5, "3-Pointers": 3.5, "current": {"Points": 29, "Rebounds": 4, "Assists": 5}},
+    "Ja Morant": {"Points": 26.5, "Rebounds": 5.5, "Assists": 8.5, "Steals": 1.5, "current": {"Points": 24, "Rebounds": 6, "Assists": 9}},
+    "Donovan Mitchell": {"Points": 27.5, "Rebounds": 4.5, "Assists": 5.5, "3-Pointers": 4.5, "current": {"Points": 25, "Rebounds": 5, "Assists": 6}},
+    "Paul George": {"Points": 23.5, "Rebounds": 6.5, "Assists": 5.5, "3-Pointers": 3.5, "current": {"Points": 22, "Rebounds": 7, "Assists": 4}},
+    "Kyrie Irving": {"Points": 26.5, "Rebounds": 5.5, "Assists": 6.5, "3-Pointers": 3.5, "current": {"Points": 28, "Rebounds": 4, "Assists": 7}},
+    "Shai Gilgeous-Alexander": {"Points": 30.5, "Rebounds": 5.5, "Assists": 6.5, "Steals": 2.5, "current": {"Points": 32, "Rebounds": 6, "Assists": 5}},
+    "Trae Young": {"Points": 26.5, "Rebounds": 3.5, "Assists": 10.5, "3-Pointers": 4.5, "current": {"Points": 24, "Rebounds": 3, "Assists": 11}},
+    "De'Aaron Fox": {"Points": 27.5, "Rebounds": 4.5, "Assists": 6.5, "Steals": 1.5, "current": {"Points": 26, "Rebounds": 5, "Assists": 7}},
+    "Bam Adebayo": {"Points": 19.5, "Rebounds": 10.5, "Assists": 4.5, "Blocks": 1.5, "current": {"Points": 18, "Rebounds": 11, "Assists": 5}},
+    "Zion Williamson": {"Points": 25.5, "Rebounds": 7.5, "Assists": 5.5, "Blocks": 0.5, "current": {"Points": 27, "Rebounds": 8, "Assists": 4}},
+    "Karl-Anthony Towns": {"Points": 22.5, "Rebounds": 9.5, "Assists": 3.5, "3-Pointers": 2.5, "current": {"Points": 24, "Rebounds": 10, "Assists": 3}},
+    "Tyrese Haliburton": {"Points": 21.5, "Rebounds": 4.5, "Assists": 11.5, "3-Pointers": 3.5, "current": {"Points": 20, "Rebounds": 5, "Assists": 12}},
+    "Jalen Brunson": {"Points": 25.5, "Rebounds": 3.5, "Assists": 6.5, "3-Pointers": 3.5, "current": {"Points": 27, "Rebounds": 4, "Assists": 7}},
+    "Paolo Banchero": {"Points": 22.5, "Rebounds": 7.5, "Assists": 4.5, "Blocks": 0.5, "current": {"Points": 21, "Rebounds": 8, "Assists": 5}},
+    "Victor Wembanyama": {"Points": 21.5, "Rebounds": 10.5, "Assists": 3.5, "Blocks": 3.5, "current": {"Points": 23, "Rebounds": 9, "Assists": 4}},
+    "Alperen Sengun": {"Points": 21.5, "Rebounds": 9.5, "Assists": 5.5, "Blocks": 1.5, "current": {"Points": 20, "Rebounds": 10, "Assists": 6}},
+    "Franz Wagner": {"Points": 20.5, "Rebounds": 5.5, "Assists": 4.5, "Steals": 1.5, "current": {"Points": 22, "Rebounds": 6, "Assists": 4}},
+    "Scottie Barnes": {"Points": 19.5, "Rebounds": 8.5, "Assists": 6.5, "Steals": 1.5, "current": {"Points": 18, "Rebounds": 9, "Assists": 7}},
     
-    # NFL Players
+    # ============ NFL PLAYERS (25+ Players) ============
     "Patrick Mahomes": {"Passing Yards": 285.5, "Passing TDs": 2.5, "Interceptions": 0.5, "Completions": 26.5, "current": {"Passing Yards": 240, "Passing TDs": 2}},
     "Josh Allen": {"Passing Yards": 275.5, "Rushing Yards": 45.5, "Total TDs": 2.5, "Completions": 24.5, "current": {"Passing Yards": 290, "Rushing Yards": 38}},
     "Christian McCaffrey": {"Rushing Yards": 85.5, "Receiving Yards": 45.5, "Total TDs": 1.5, "Receptions": 5.5, "current": {"Rushing Yards": 78, "Receiving Yards": 52}},
     "Travis Kelce": {"Receiving Yards": 75.5, "Receptions": 6.5, "Receiving TDs": 0.5, "Targets": 9.5, "current": {"Receiving Yards": 82, "Receptions": 7}},
     "Tyreek Hill": {"Receiving Yards": 85.5, "Receptions": 7.5, "Receiving TDs": 0.5, "Targets": 10.5, "current": {"Receiving Yards": 91, "Receptions": 8}},
     "Lamar Jackson": {"Passing Yards": 245.5, "Rushing Yards": 55.5, "Total TDs": 2.5, "Completions": 22.5, "current": {"Passing Yards": 258, "Rushing Yards": 48}},
+    "Jalen Hurts": {"Passing Yards": 235.5, "Rushing Yards": 48.5, "Total TDs": 2.5, "Completions": 21.5, "current": {"Passing Yards": 245, "Rushing Yards": 52}},
+    "Joe Burrow": {"Passing Yards": 275.5, "Passing TDs": 2.5, "Interceptions": 0.5, "Completions": 26.5, "current": {"Passing Yards": 280, "Passing TDs": 3}},
+    "Justin Jefferson": {"Receiving Yards": 85.5, "Receptions": 7.5, "Receiving TDs": 0.5, "Targets": 10.5, "current": {"Receiving Yards": 88, "Receptions": 8}},
+    "CeeDee Lamb": {"Receiving Yards": 82.5, "Receptions": 7.5, "Receiving TDs": 0.5, "Targets": 10.5, "current": {"Receiving Yards": 85, "Receptions": 7}},
+    "Ja'Marr Chase": {"Receiving Yards": 80.5, "Receptions": 6.5, "Receiving TDs": 0.5, "Targets": 9.5, "current": {"Receiving Yards": 91, "Receptions": 7}},
+    "Saquon Barkley": {"Rushing Yards": 82.5, "Receiving Yards": 35.5, "Total TDs": 1.5, "Receptions": 4.5, "current": {"Rushing Yards": 88, "Receiving Yards": 32}},
+    "Stefon Diggs": {"Receiving Yards": 75.5, "Receptions": 7.5, "Receiving TDs": 0.5, "Targets": 10.5, "current": {"Receiving Yards": 78, "Receptions": 8}},
+    "Davante Adams": {"Receiving Yards": 72.5, "Receptions": 6.5, "Receiving TDs": 0.5, "Targets": 9.5, "current": {"Receiving Yards": 75, "Receptions": 7}},
+    "Garrett Wilson": {"Receiving Yards": 68.5, "Receptions": 6.5, "Receiving TDs": 0.5, "Targets": 9.5, "current": {"Receiving Yards": 72, "Receptions": 6}},
+    "Amon-Ra St. Brown": {"Receiving Yards": 75.5, "Receptions": 7.5, "Receiving TDs": 0.5, "Targets": 10.5, "current": {"Receiving Yards": 79, "Receptions": 8}},
+    "Brock Purdy": {"Passing Yards": 265.5, "Passing TDs": 2.5, "Interceptions": 0.5, "Completions": 25.5, "current": {"Passing Yards": 270, "Passing TDs": 2}},
+    "Tua Tagovailoa": {"Passing Yards": 275.5, "Passing TDs": 2.5, "Interceptions": 0.5, "Completions": 27.5, "current": {"Passing Yards": 285, "Passing TDs": 3}},
+    "Dak Prescott": {"Passing Yards": 265.5, "Passing TDs": 2.5, "Interceptions": 0.5, "Completions": 25.5, "current": {"Passing Yards": 260, "Passing TDs": 2}},
+    "Jordan Love": {"Passing Yards": 255.5, "Passing TDs": 2.5, "Interceptions": 0.5, "Completions": 23.5, "current": {"Passing Yards": 265, "Passing TDs": 2}},
+    "Derrick Henry": {"Rushing Yards": 82.5, "Receiving Yards": 15.5, "Total TDs": 1.5, "Receptions": 2.5, "current": {"Rushing Yards": 86, "Receiving Yards": 12}},
+    "Josh Jacobs": {"Rushing Yards": 75.5, "Receiving Yards": 25.5, "Total TDs": 1.5, "Receptions": 3.5, "current": {"Rushing Yards": 78, "Receiving Yards": 28}},
+    "Tony Pollard": {"Rushing Yards": 68.5, "Receiving Yards": 32.5, "Total TDs": 1.5, "Receptions": 4.5, "current": {"Rushing Yards": 72, "Receiving Yards": 35}},
+    "Nick Chubb": {"Rushing Yards": 78.5, "Receiving Yards": 18.5, "Total TDs": 1.5, "Receptions": 2.5, "current": {"Rushing Yards": 82, "Receiving Yards": 15}},
+    "Kenneth Walker III": {"Rushing Yards": 72.5, "Receiving Yards": 22.5, "Total TDs": 1.5, "Receptions": 3.5, "current": {"Rushing Yards": 75, "Receiving Yards": 25}},
     
-    # Soccer Players
-    "Erling Haaland": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 6}},
+    # ============ SOCCER - GLOBAL (40+ Players from EPL, La Liga, Serie A, Bundesliga, Ligue 1) ============
+    # Premier League
+    "Erling Haaland": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "Assists": 0.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 6}},
     "Mohamed Salah": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 3}},
     "Kevin De Bruyne": {"Assists": 0.5, "Passes": 65.5, "Shots on Target": 1.5, "Key Passes": 3.5, "current": {"Assists": 0, "Passes": 58, "Key Passes": 4}},
-    "Harry Kane": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 5}},
-    "Kylian Mbappe": {"Goals": 0.5, "Shots on Target": 3.5, "Assists": 0.5, "Shots": 5.5, "current": {"Goals": 0, "Shots on Target": 2, "Assists": 1}},
+    "Harry Kane": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "Assists": 0.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 5}},
+    "Bukayo Saka": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 2}},
+    "Phil Foden": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Passes": 55.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 3}},
+    "Bruno Fernandes": {"Goals": 0.5, "Assists": 0.5, "Passes": 62.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 1, "Passes": 65}},
+    "Martin Odegaard": {"Goals": 0.5, "Assists": 0.5, "Passes": 68.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 0, "Passes": 72}},
+    "Son Heung-min": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 3}},
+    "Ollie Watkins": {"Goals": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "Assists": 0.5, "current": {"Goals": 0, "Shots on Target": 2, "Shots": 5}},
+    "Cole Palmer": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Key Passes": 3.5, "current": {"Goals": 1, "Assists": 1, "Shots on Target": 3}},
+    "Raheem Sterling": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 0, "Assists": 0, "Shots on Target": 2}},
     
-    # MLB Players
-    "Shohei Ohtani": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Strikeouts (Pitching)": 8.5, "current": {"Hits": 2, "Home Runs": 1, "RBIs": 2, "Strikeouts (Pitching)": 7}},
-    "Aaron Judge": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
-    "Mookie Betts": {"Hits": 1.5, "Runs": 1.5, "Stolen Bases": 0.5, "Total Bases": 2.5, "current": {"Hits": 2, "Runs": 1, "Stolen Bases": 1, "Total Bases": 3}},
-    "Ronald Acuna Jr": {"Hits": 1.5, "Stolen Bases": 0.5, "Runs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Stolen Bases": 0, "Runs": 2, "Total Bases": 2}},
+    # La Liga  
+    "Kylian Mbappe": {"Goals": 0.5, "Shots on Target": 3.5, "Assists": 0.5, "Shots": 5.5, "current": {"Goals": 0, "Shots on Target": 2, "Assists": 1}},
+    "Robert Lewandowski": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "Assists": 0.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 6}},
+    "Jude Bellingham": {"Goals": 0.5, "Assists": 0.5, "Passes": 58.5, "Key Passes": 2.5, "current": {"Goals": 1, "Assists": 0, "Passes": 62}},
+    "Vinicius Junior": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 5.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 3}},
+    "Antoine Griezmann": {"Goals": 0.5, "Assists": 0.5, "Passes": 52.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 1, "Passes": 55}},
+    "Lamine Yamal": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 0, "Shots on Target": 2}},
+    "Rodrygo": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 3}},
+    
+    # Bundesliga
+    "Florian Wirtz": {"Goals": 0.5, "Assists": 0.5, "Passes": 55.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 1, "Passes": 58}},
+    "Jamal Musiala": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Key Passes": 3.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 3}},
+    "Serge Gnabry": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 2}},
+    "Leroy Sane": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Key Passes": 3.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 3}},
+    
+    # Serie A
+    "Victor Osimhen": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "Assists": 0.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 5}},
+    "Lautaro Martinez": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "Assists": 0.5, "current": {"Goals": 0, "Shots on Target": 2, "Shots": 4}},
+    "Rafael Leao": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 3}},
+    "Paulo Dybala": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Key Passes": 3.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 2}},
+    
+    # Ligue 1
+    "Ousmane Dembele": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 5.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 3}},
+    "Bradley Barcola": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 2.5, "Shots": 4.5, "current": {"Goals": 1, "Assists": 0, "Shots on Target": 2}},
+    "Alexandre Lacazette": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "Assists": 0.5, "current": {"Goals": 0, "Shots on Target": 2, "Shots": 4}},
+    
+    # International Stars
+    "Cristiano Ronaldo": {"Goals": 0.5, "Shots on Target": 4.5, "Shots": 7.5, "Assists": 0.5, "current": {"Goals": 1, "Shots on Target": 5, "Shots": 8}},
+    "Neymar Jr": {"Goals": 0.5, "Assists": 0.5, "Shots on Target": 3.5, "Key Passes": 4.5, "current": {"Goals": 0, "Assists": 1, "Shots on Target": 2}},
+    
+    # ============ MLB PLAYERS (25+ Players) ============
+    "Shohei Ohtani": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Strikeouts (Pitching)": 8.5, "Total Bases": 2.5, "current": {"Hits": 2, "Home Runs": 1, "RBIs": 2, "Strikeouts (Pitching)": 7}},
+    "Aaron Judge": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "Walks": 1.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
+    "Mookie Betts": {"Hits": 1.5, "Runs": 1.5, "Stolen Bases": 0.5, "Total Bases": 2.5, "Walks": 1.5, "current": {"Hits": 2, "Runs": 1, "Stolen Bases": 1, "Total Bases": 3}},
+    "Ronald Acuna Jr": {"Hits": 1.5, "Stolen Bases": 0.5, "Runs": 1.5, "Total Bases": 2.5, "Home Runs": 0.5, "current": {"Hits": 1, "Stolen Bases": 0, "Runs": 2, "Total Bases": 2}},
     "Gerrit Cole": {"Strikeouts": 7.5, "Hits Allowed": 5.5, "Earned Runs": 2.5, "Walks": 2.5, "current": {"Strikeouts": 8, "Hits Allowed": 4, "Earned Runs": 2, "Walks": 2}},
     "Jacob deGrom": {"Strikeouts": 8.5, "Hits Allowed": 4.5, "Earned Runs": 2.5, "Walks": 1.5, "current": {"Strikeouts": 9, "Hits Allowed": 3, "Earned Runs": 1, "Walks": 1}},
+    "Freddie Freeman": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 2, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
+    "Jose Altuve": {"Hits": 1.5, "Runs": 1.5, "Stolen Bases": 0.5, "Total Bases": 2.5, "current": {"Hits": 1, "Runs": 1, "Stolen Bases": 0, "Total Bases": 1}},
+    "Julio Rodriguez": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Stolen Bases": 0.5, "current": {"Hits": 2, "Home Runs": 1, "RBIs": 2, "Stolen Bases": 1}},
+    "Bo Bichette": {"Hits": 1.5, "Runs": 1.5, "Total Bases": 2.5, "RBIs": 1.5, "current": {"Hits": 1, "Runs": 1, "Total Bases": 2, "RBIs": 1}},
+    "Vladimir Guerrero Jr": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 2, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
+    "Matt Olson": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 1, "RBIs": 2, "Total Bases": 3}},
+    "Yordan Alvarez": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 2, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
+    "Corbin Burnes": {"Strikeouts": 7.5, "Hits Allowed": 5.5, "Earned Runs": 2.5, "Walks": 2.5, "current": {"Strikeouts": 8, "Hits Allowed": 5, "Earned Runs": 2, "Walks": 2}},
+    "Sandy Alcantara": {"Strikeouts": 7.5, "Hits Allowed": 6.5, "Earned Runs": 2.5, "Walks": 2.5, "current": {"Strikeouts": 7, "Hits Allowed": 7, "Earned Runs": 3, "Walks": 2}},
+    "Max Scherzer": {"Strikeouts": 8.5, "Hits Allowed": 5.5, "Earned Runs": 2.5, "Walks": 2.5, "current": {"Strikeouts": 9, "Hits Allowed": 4, "Earned Runs": 2, "Walks": 3}},
+    "Fernando Tatis Jr": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Stolen Bases": 0.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Stolen Bases": 1}},
+    "Mike Trout": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Walks": 1.5, "current": {"Hits": 2, "Home Runs": 1, "RBIs": 2, "Walks": 1}},
+    "Bryce Harper": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Total Bases": 1}},
+    "Juan Soto": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Walks": 1.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Walks": 2}},
+    "Pete Alonso": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 1, "RBIs": 2, "Total Bases": 3}},
+    "Rafael Devers": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 2, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
+    "Corey Seager": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Total Bases": 1}},
+    "Marcus Semien": {"Hits": 1.5, "Runs": 1.5, "Total Bases": 2.5, "RBIs": 1.5, "current": {"Hits": 2, "Runs": 1, "Total Bases": 2, "RBIs": 1}},
+    "Adolis Garcia": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 1, "RBIs": 2, "Total Bases": 3}},
     
-    # NHL Players
-    "Connor McDavid": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 5}},
+    # ============ NHL PLAYERS (20+ Players from NHL & International) ============
+    "Connor McDavid": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "Power Play Points": 0.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 5}},
     "Auston Matthews": {"Goals": 0.5, "Points": 1.5, "Shots on Goal": 4.5, "Power Play Points": 0.5, "current": {"Goals": 1, "Points": 1, "Shots on Goal": 4, "Power Play Points": 1}},
     "Nathan MacKinnon": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Shots on Goal": 3}},
     "David Pastrnak": {"Goals": 0.5, "Points": 1.5, "Shots on Goal": 4.5, "Power Play Points": 0.5, "current": {"Goals": 0, "Points": 2, "Shots on Goal": 5, "Power Play Points": 1}},
     "Leon Draisaitl": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Power Play Points": 0.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Power Play Points": 0}},
+    "Nikita Kucherov": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Shots on Goal": 4}},
+    "Cale Makar": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 3.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 4}},
+    "Matthew Tkachuk": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Shots on Goal": 3}},
+    "Artemi Panarin": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 2, "Goals": 0, "Assists": 2, "Shots on Goal": 5}},
+    "Jack Hughes": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 1, "Goals": 1, "Assists": 0, "Shots on Goal": 4}},
+    "Igor Shesterkin": {"Saves": 28.5, "Goals Against": 2.5, "Save Percentage": 0.925, "current": {"Saves": 30, "Goals Against": 2}},
+    "Connor Hellebuyck": {"Saves": 29.5, "Goals Against": 2.5, "Save Percentage": 0.920, "current": {"Saves": 28, "Goals Against": 3}},
+    "Alexandar Georgiev": {"Saves": 27.5, "Goals Against": 2.5, "Save Percentage": 0.915, "current": {"Saves": 26, "Goals Against": 2}},
+    "Kirill Kaprizov": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 5}},
+    "Sidney Crosby": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 3.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Shots on Goal": 3}},
+    "Alex Ovechkin": {"Goals": 0.5, "Points": 1.5, "Shots on Goal": 5.5, "Power Play Points": 0.5, "current": {"Goals": 1, "Points": 1, "Shots on Goal": 6, "Power Play Points": 1}},
+    "Elias Pettersson": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Shots on Goal": 4}},
+    "Tim Stutzle": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 5}},
+    "Mika Zibanejad": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Power Play Points": 0.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Power Play Points": 0}},
+    "Jason Robertson": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 4}},
     
-    # UFC Fighters
-    "Jon Jones": {"Sig Strikes": 65.5, "Takedowns": 2.5, "Fight Duration": 2.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Fight Duration": 0}},
-    "Islam Makhachev": {"Sig Strikes": 55.5, "Takedowns": 3.5, "Control Time": 8.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Control Time": 0}},
+    # ============ UFC/MMA FIGHTERS (15+ Fighters) ============
+    "Jon Jones": {"Sig Strikes": 65.5, "Takedowns": 2.5, "Fight Duration": 2.5, "Control Time": 8.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Fight Duration": 0}},
+    "Islam Makhachev": {"Sig Strikes": 55.5, "Takedowns": 3.5, "Control Time": 8.5, "Submission Attempts": 1.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Control Time": 0}},
     "Alexander Volkanovski": {"Sig Strikes": 85.5, "Takedowns": 1.5, "Sig Strike Defense": 65.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Sig Strike Defense": 0}},
-    "Israel Adesanya": {"Sig Strikes": 95.5, "Knockdowns": 0.5, "Sig Strikes Landed": 75.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    "Israel Adesanya": {"Sig Strikes": 95.5, "Knockdowns": 0.5, "Sig Strikes Landed": 75.5, "Sig Strike Accuracy": 52.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    "Alex Pereira": {"Sig Strikes": 75.5, "Knockdowns": 0.5, "Sig Strikes Landed": 65.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    "Charles Oliveira": {"Sig Strikes": 65.5, "Takedowns": 2.5, "Submission Attempts": 1.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Submission Attempts": 0}},
+    "Leon Edwards": {"Sig Strikes": 75.5, "Takedowns": 1.5, "Sig Strike Defense": 62.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Sig Strike Defense": 0}},
+    "Colby Covington": {"Sig Strikes": 85.5, "Takedowns": 3.5, "Control Time": 9.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Control Time": 0}},
+    "Kamaru Usman": {"Sig Strikes": 75.5, "Takedowns": 2.5, "Control Time": 8.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Control Time": 0}},
+    "Amanda Nunes": {"Sig Strikes": 65.5, "Knockdowns": 0.5, "Sig Strikes Landed": 55.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    "Valentina Shevchenko": {"Sig Strikes": 75.5, "Takedowns": 1.5, "Sig Strike Defense": 65.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Sig Strike Defense": 0}},
+    "Sean O'Malley": {"Sig Strikes": 85.5, "Knockdowns": 0.5, "Sig Strikes Landed": 72.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    "Max Holloway": {"Sig Strikes": 95.5, "Takedowns": 0.5, "Sig Strikes Landed": 85.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Sig Strikes Landed": 0}},
+    "Justin Gaethje": {"Sig Strikes": 85.5, "Knockdowns": 0.5, "Sig Strikes Landed": 75.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    "Dustin Poirier": {"Sig Strikes": 75.5, "Takedowns": 1.5, "Submission Attempts": 0.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Submission Attempts": 0}},
     
-    # Tennis Players
-    "Novak Djokovic": {"Aces": 8.5, "Double Faults": 2.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 7, "Double Faults": 2, "Games Won": 12, "Sets Won": 2}},
-    "Carlos Alcaraz": {"Aces": 7.5, "Winners": 35.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 8, "Winners": 32, "Games Won": 14, "Sets Won": 2}},
-    "Iga Swiatek": {"Aces": 4.5, "Winners": 25.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 5, "Winners": 28, "Games Won": 15, "Sets Won": 2}},
-    "Aryna Sabalenka": {"Aces": 6.5, "Winners": 30.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 7, "Winners": 33, "Games Won": 16, "Sets Won": 2}},
+    # ============ TENNIS PLAYERS (15+ Players from ATP & WTA) ============
+    "Novak Djokovic": {"Aces": 8.5, "Double Faults": 2.5, "Games Won": 15.5, "Sets Won": 2.5, "Winners": 35.5, "current": {"Aces": 7, "Double Faults": 2, "Games Won": 12, "Sets Won": 2}},
+    "Carlos Alcaraz": {"Aces": 7.5, "Winners": 35.5, "Games Won": 15.5, "Sets Won": 2.5, "Double Faults": 3.5, "current": {"Aces": 8, "Winners": 32, "Games Won": 14, "Sets Won": 2}},
+    "Iga Swiatek": {"Aces": 4.5, "Winners": 25.5, "Games Won": 14.5, "Sets Won": 2.5, "Double Faults": 2.5, "current": {"Aces": 5, "Winners": 28, "Games Won": 15, "Sets Won": 2}},
+    "Aryna Sabalenka": {"Aces": 6.5, "Winners": 30.5, "Games Won": 14.5, "Sets Won": 2.5, "Double Faults": 4.5, "current": {"Aces": 7, "Winners": 33, "Games Won": 16, "Sets Won": 2}},
+    "Daniil Medvedev": {"Aces": 7.5, "Winners": 30.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 6, "Winners": 28, "Games Won": 14, "Sets Won": 2}},
+    "Jannik Sinner": {"Aces": 7.5, "Winners": 32.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 8, "Winners": 35, "Games Won": 16, "Sets Won": 2}},
+    "Coco Gauff": {"Aces": 5.5, "Winners": 22.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 6, "Winners": 24, "Games Won": 15, "Sets Won": 2}},
+    "Elena Rybakina": {"Aces": 7.5, "Winners": 28.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 8, "Winners": 30, "Games Won": 15, "Sets Won": 2}},
+    "Alexander Zverev": {"Aces": 8.5, "Winners": 32.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 9, "Winners": 34, "Games Won": 16, "Sets Won": 2}},
+    "Holger Rune": {"Aces": 6.5, "Winners": 28.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 7, "Winners": 26, "Games Won": 13, "Sets Won": 2}},
+    "Stefanos Tsitsipas": {"Aces": 7.5, "Winners": 30.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 8, "Winners": 32, "Games Won": 16, "Sets Won": 2}},
+    "Jessica Pegula": {"Aces": 4.5, "Winners": 24.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 5, "Winners": 26, "Games Won": 15, "Sets Won": 2}},
+    "Ons Jabeur": {"Aces": 4.5, "Winners": 26.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 4, "Winners": 24, "Games Won": 13, "Sets Won": 2}},
+    "Andrey Rublev": {"Aces": 7.5, "Winners": 31.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 6, "Winners": 29, "Games Won": 14, "Sets Won": 2}},
+    "Taylor Fritz": {"Aces": 9.5, "Winners": 33.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 10, "Winners": 35, "Games Won": 16, "Sets Won": 2}},
 }
 
 def get_betting_line(player_name, stat_type):
