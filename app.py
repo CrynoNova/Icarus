@@ -202,6 +202,7 @@ def get_player_props(team, sport="NBA"):
     """Generate realistic player props based on sport and team"""
     # Map team names to relevant players
     team_players = {
+        # NBA
         "Lakers": ["LeBron James", "Anthony Davis"],
         "Warriors": ["Stephen Curry", "Kevin Durant"],
         "Celtics": ["Jayson Tatum"],
@@ -220,6 +221,15 @@ def get_player_props(team, sport="NBA"):
         "Arsenal": ["Mohamed Salah"],
         "Bayern Munich": ["Harry Kane"],
         "PSG": ["Kylian Mbappe"],
+        # MLB
+        "Dodgers": ["Shohei Ohtani", "Mookie Betts"],
+        "Yankees": ["Aaron Judge"],
+        "Braves": ["Ronald Acuna Jr"],
+        # NHL
+        "Oilers": ["Connor McDavid", "Leon Draisaitl"],
+        "Maple Leafs": ["Auston Matthews"],
+        "Avalanche": ["Nathan MacKinnon"],
+        "Bruins": ["David Pastrnak"],
     }
     
     # Get players for this team, or return random players
@@ -229,7 +239,7 @@ def get_player_props(team, sport="NBA"):
     for name in player_names[:3]:  # Max 3 players per team
         if name in BETTING_LINES:
             player_data = BETTING_LINES[name]
-            # Convert to display format
+            # Convert to display format based on sport
             if sport == "NBA":
                 players_data.append({
                     "name": name,
@@ -248,13 +258,33 @@ def get_player_props(team, sport="NBA"):
                     "current_pass_yds": player_data.get("current", {}).get("Passing Yards", 0) or player_data.get("current", {}).get("Rushing Yards", 0) or player_data.get("current", {}).get("Receiving Yards", 0),
                     "current_pass_tds": player_data.get("current", {}).get("Passing TDs", 0) or player_data.get("current", {}).get("Rushing TDs", 0) or player_data.get("current", {}).get("Receiving TDs", 0)
                 })
-            else:  # Soccer
+            elif sport == "MLB":
                 players_data.append({
                     "name": name,
+                    "hits": player_data.get("Hits", 1.5),
+                    "hrs": player_data.get("Home Runs", 0.5),
+                    "rbis": player_data.get("RBIs", 1.5),
+                    "current_hits": player_data.get("current", {}).get("Hits", 1),
+                    "current_hrs": player_data.get("current", {}).get("Home Runs", 0),
+                    "current_rbis": player_data.get("current", {}).get("RBIs", 1)
+                })
+            elif sport == "NHL":
+                players_data.append({
+                    "name": name,
+                    "points": player_data.get("Points", 1.5),
                     "goals": player_data.get("Goals", 0.5),
-                    "shots": player_data.get("Shots", 3.5),
+                    "assists": player_data.get("Assists", 1.5),
+                    "current_points": player_data.get("current", {}).get("Points", 1),
                     "current_goals": player_data.get("current", {}).get("Goals", 0),
-                    "current_shots": player_data.get("current", {}).get("Shots", 2)
+                    "current_assists": player_data.get("current", {}).get("Assists", 1)
+                })
+            else:  # Soccer, UFC, Tennis
+                players_data.append({
+                    "name": name,
+                    "goals": player_data.get("Goals", 0.5) or player_data.get("Sig Strikes", 65.5) or player_data.get("Aces", 8.5),
+                    "shots": player_data.get("Shots", 3.5) or player_data.get("Takedowns", 2.5) or player_data.get("Games Won", 15.5),
+                    "current_goals": player_data.get("current", {}).get("Goals", 0) or player_data.get("current", {}).get("Sig Strikes", 0) or player_data.get("current", {}).get("Aces", 7),
+                    "current_shots": player_data.get("current", {}).get("Shots", 2) or player_data.get("current", {}).get("Takedowns", 0) or player_data.get("current", {}).get("Games Won", 12)
                 })
     
     return players_data if players_data else [
@@ -289,6 +319,33 @@ BETTING_LINES = {
     "Kevin De Bruyne": {"Assists": 0.5, "Passes": 65.5, "Shots on Target": 1.5, "Key Passes": 3.5, "current": {"Assists": 0, "Passes": 58, "Key Passes": 4}},
     "Harry Kane": {"Goals": 0.5, "Shots on Target": 3.5, "Shots": 5.5, "current": {"Goals": 1, "Shots on Target": 4, "Shots": 5}},
     "Kylian Mbappe": {"Goals": 0.5, "Shots on Target": 3.5, "Assists": 0.5, "Shots": 5.5, "current": {"Goals": 0, "Shots on Target": 2, "Assists": 1}},
+    
+    # MLB Players
+    "Shohei Ohtani": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Strikeouts (Pitching)": 8.5, "current": {"Hits": 2, "Home Runs": 1, "RBIs": 2, "Strikeouts (Pitching)": 7}},
+    "Aaron Judge": {"Hits": 1.5, "Home Runs": 0.5, "RBIs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Home Runs": 0, "RBIs": 1, "Total Bases": 2}},
+    "Mookie Betts": {"Hits": 1.5, "Runs": 1.5, "Stolen Bases": 0.5, "Total Bases": 2.5, "current": {"Hits": 2, "Runs": 1, "Stolen Bases": 1, "Total Bases": 3}},
+    "Ronald Acuna Jr": {"Hits": 1.5, "Stolen Bases": 0.5, "Runs": 1.5, "Total Bases": 2.5, "current": {"Hits": 1, "Stolen Bases": 0, "Runs": 2, "Total Bases": 2}},
+    "Gerrit Cole": {"Strikeouts": 7.5, "Hits Allowed": 5.5, "Earned Runs": 2.5, "Walks": 2.5, "current": {"Strikeouts": 8, "Hits Allowed": 4, "Earned Runs": 2, "Walks": 2}},
+    "Jacob deGrom": {"Strikeouts": 8.5, "Hits Allowed": 4.5, "Earned Runs": 2.5, "Walks": 1.5, "current": {"Strikeouts": 9, "Hits Allowed": 3, "Earned Runs": 1, "Walks": 1}},
+    
+    # NHL Players
+    "Connor McDavid": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Shots on Goal": 5}},
+    "Auston Matthews": {"Goals": 0.5, "Points": 1.5, "Shots on Goal": 4.5, "Power Play Points": 0.5, "current": {"Goals": 1, "Points": 1, "Shots on Goal": 4, "Power Play Points": 1}},
+    "Nathan MacKinnon": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Shots on Goal": 4.5, "current": {"Points": 1, "Goals": 0, "Assists": 1, "Shots on Goal": 3}},
+    "David Pastrnak": {"Goals": 0.5, "Points": 1.5, "Shots on Goal": 4.5, "Power Play Points": 0.5, "current": {"Goals": 0, "Points": 2, "Shots on Goal": 5, "Power Play Points": 1}},
+    "Leon Draisaitl": {"Points": 1.5, "Goals": 0.5, "Assists": 1.5, "Power Play Points": 0.5, "current": {"Points": 2, "Goals": 1, "Assists": 1, "Power Play Points": 0}},
+    
+    # UFC Fighters
+    "Jon Jones": {"Sig Strikes": 65.5, "Takedowns": 2.5, "Fight Duration": 2.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Fight Duration": 0}},
+    "Islam Makhachev": {"Sig Strikes": 55.5, "Takedowns": 3.5, "Control Time": 8.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Control Time": 0}},
+    "Alexander Volkanovski": {"Sig Strikes": 85.5, "Takedowns": 1.5, "Sig Strike Defense": 65.5, "current": {"Sig Strikes": 0, "Takedowns": 0, "Sig Strike Defense": 0}},
+    "Israel Adesanya": {"Sig Strikes": 95.5, "Knockdowns": 0.5, "Sig Strikes Landed": 75.5, "current": {"Sig Strikes": 0, "Knockdowns": 0, "Sig Strikes Landed": 0}},
+    
+    # Tennis Players
+    "Novak Djokovic": {"Aces": 8.5, "Double Faults": 2.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 7, "Double Faults": 2, "Games Won": 12, "Sets Won": 2}},
+    "Carlos Alcaraz": {"Aces": 7.5, "Winners": 35.5, "Games Won": 15.5, "Sets Won": 2.5, "current": {"Aces": 8, "Winners": 32, "Games Won": 14, "Sets Won": 2}},
+    "Iga Swiatek": {"Aces": 4.5, "Winners": 25.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 5, "Winners": 28, "Games Won": 15, "Sets Won": 2}},
+    "Aryna Sabalenka": {"Aces": 6.5, "Winners": 30.5, "Games Won": 14.5, "Sets Won": 2.5, "current": {"Aces": 7, "Winners": 33, "Games Won": 16, "Sets Won": 2}},
 }
 
 def get_betting_line(player_name, stat_type):
@@ -333,11 +390,15 @@ def parse_espn_event(event):
 # AUTO-CONNECT TO ALL APIs
 @st.cache_data(ttl=30)
 def fetch_all_live_games():
-    """Auto-fetch live games from all 3 sports APIs"""
+    """Auto-fetch live games from all sports APIs"""
     result = {
         "nba": [],
         "nfl": [],
-        "soccer": []
+        "soccer": [],
+        "mlb": [],
+        "nhl": [],
+        "ufc": [],
+        "tennis": []
     }
     
     # NBA
@@ -357,6 +418,30 @@ def fetch_all_live_games():
         result["soccer"] = get_soccer_games()
     except:
         result["soccer"] = []
+    
+    # MLB
+    try:
+        result["mlb"] = get_mlb_games()
+    except:
+        result["mlb"] = []
+    
+    # NHL
+    try:
+        result["nhl"] = get_nhl_games()
+    except:
+        result["nhl"] = []
+    
+    # UFC
+    try:
+        result["ufc"] = get_ufc_events()
+    except:
+        result["ufc"] = []
+    
+    # Tennis
+    try:
+        result["tennis"] = get_tennis_matches()
+    except:
+        result["tennis"] = []
     
     return result
 
@@ -384,6 +469,62 @@ def get_soccer_games(league="eng.1"):
             data = response.json()
             events = data.get('events', [])
             return events[:10]  # Top 10 games
+        return []
+    except Exception as e:
+        return []
+
+@st.cache_data(ttl=30)
+def get_mlb_games():
+    """Fetch MLB games from ESPN API"""
+    try:
+        url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
+        response = requests.get(url, timeout=8)
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get('events', [])
+            return events[:10]
+        return []
+    except Exception as e:
+        return []
+
+@st.cache_data(ttl=30)
+def get_nhl_games():
+    """Fetch NHL games from ESPN API"""
+    try:
+        url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
+        response = requests.get(url, timeout=8)
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get('events', [])
+            return events[:10]
+        return []
+    except Exception as e:
+        return []
+
+@st.cache_data(ttl=30)
+def get_ufc_events():
+    """Fetch UFC events from ESPN API"""
+    try:
+        url = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
+        response = requests.get(url, timeout=8)
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get('events', [])
+            return events[:10]
+        return []
+    except Exception as e:
+        return []
+
+@st.cache_data(ttl=30)
+def get_tennis_matches():
+    """Fetch Tennis matches from ESPN API"""
+    try:
+        url = "https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard"
+        response = requests.get(url, timeout=8)
+        if response.status_code == 200:
+            data = response.json()
+            events = data.get('events', [])
+            return events[:10]
         return []
     except Exception as e:
         return []
@@ -536,26 +677,34 @@ st.markdown("---")
 st.markdown("**Connecting to all APIs...**")
 all_games = fetch_all_live_games()
 
-# Connection Status
-status_cols = st.columns(3)
+# Connection Status - All Sports
+status_cols = st.columns(7)
 with status_cols[0]:
     nba_status = "✅" if all_games["nba"] else "⏳"
-    st.metric(f"{nba_status} NBA", f"{len(all_games['nba'])} games", delta="LIVE")
+    st.metric(f"{nba_status} NBA", f"{len(all_games['nba'])}")
 with status_cols[1]:
     nfl_status = "✅" if all_games["nfl"] else "⏳"
-    st.metric(f"{nfl_status} NFL", f"{len(all_games['nfl'])} games", delta="LIVE")
+    st.metric(f"{nfl_status} NFL", f"{len(all_games['nfl'])}")
 with status_cols[2]:
     soccer_status = "✅" if all_games["soccer"] else "⏳"
-    st.metric(f"{soccer_status} Soccer", f"{len(all_games['soccer'])} games", delta="LIVE")
+    st.metric(f"{soccer_status} Soccer", f"{len(all_games['soccer'])}")
+with status_cols[3]:
+    mlb_status = "✅" if all_games["mlb"] else "⏳"
+    st.metric(f"{mlb_status} MLB", f"{len(all_games['mlb'])}")
+with status_cols[4]:
+    nhl_status = "✅" if all_games["nhl"] else "⏳"
+    st.metric(f"{nhl_status} NHL", f"{len(all_games['nhl'])}")
+with status_cols[5]:
+    ufc_status = "✅" if all_games["ufc"] else "⏳"
+    st.metric(f"{ufc_status} UFC", f"{len(all_games['ufc'])}")
+with status_cols[6]:
+    tennis_status = "✅" if all_games["tennis"] else "⏳"
+    st.metric(f"{tennis_status} Tennis", f"{len(all_games['tennis'])}")
 
 st.markdown("---")
 
-# SIDEBAR - MOBILE ACCESS INFO
-st.sidebar.markdown("### 📱 Mobile Access")
-st.sidebar.code("On same WiFi:\n10.0.0.146:8501\n\nOr:\n172.210.53.192:8501", language="text")
-
-# DISPLAY LIVE GAMES BY SPORT
-tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚽ Soccer"])
+# DISPLAY LIVE GAMES BY SPORT - Expanded
+tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚽ Soccer", "⚾ MLB", "🏒 NHL", "🥊 UFC", "🎾 Tennis"])
 
 # NBA TAB - Enhanced with Player Props
 with tabs[0]:
@@ -795,6 +944,218 @@ with tabs[2]:
                 pass
     else:
         st.info("🔄 Loading Soccer games...")
+
+# MLB TAB
+with tabs[3]:
+    st.subheader("⚾ MLB Live Games - Tap for Player Props & Quick-Add")
+    if all_games["mlb"]:
+        for idx, game in enumerate(all_games["mlb"]):
+            try:
+                away_team, home_team, away_score, home_score, status = parse_espn_event(game)
+                status_text = str(status).upper()
+                live_badge = "🔴 LIVE" if ("LIVE" in status_text or "IN PROGRESS" in status_text) else ""
+                
+                with st.container(border=True):
+                    col1, col2, col3 = st.columns([2, 1, 2])
+                    with col1:
+                        st.write(f"⚾ **{away_team}**")
+                    with col2:
+                        st.metric("", f"{away_score} - {home_score}", delta=live_badge)
+                    with col3:
+                        st.write(f"⚾ **{home_team}**")
+                    
+                    with st.expander(f"📊 View Player Props & Stats"):
+                        st.markdown("#### 🎯 Top Batters & Pitchers")
+                        mlb_players = ["Shohei Ohtani", "Aaron Judge", "Mookie Betts"]
+                        for player in mlb_players:
+                            if player in BETTING_LINES:
+                                st.markdown(f"**{player}**")
+                                prop_cols = st.columns([2, 2, 1])
+                                with prop_cols[0]:
+                                    hits_line = BETTING_LINES[player].get("Hits", 1.5)
+                                    hits_current = BETTING_LINES[player].get("current", {}).get("Hits", 1)
+                                    st.write(f"Hits: {hits_current}/{hits_line} O/U")
+                                    st.progress(min(hits_current/hits_line, 1.0))
+                                with prop_cols[1]:
+                                    hr_line = BETTING_LINES[player].get("Home Runs", 0.5)
+                                    rbi_line = BETTING_LINES[player].get("RBIs", 1.5)
+                                    st.write(f"HR: {hr_line} | RBI: {rbi_line}")
+                                with prop_cols[2]:
+                                    if st.button("➕", key=f"add_mlb_{idx}_{player}"):
+                                        st.session_state.parlay_legs.append({
+                                            'player': player,
+                                            'stat': 'Hits',
+                                            'line': hits_line,
+                                            'current': hits_current,
+                                            'odds': -110,
+                                            'game_time': 'Q2',
+                                            'pace': 'Medium'
+                                        })
+                                        st.success(f"✅ Added {player}!")
+                                st.divider()
+            except Exception as e:
+                pass
+    else:
+        st.info("⚾ Baseball season - Check back during regular season!")
+
+# NHL TAB
+with tabs[4]:
+    st.subheader("🏒 NHL Live Games - Tap for Player Props & Quick-Add")
+    if all_games["nhl"]:
+        for idx, game in enumerate(all_games["nhl"]):
+            try:
+                away_team, home_team, away_score, home_score, status = parse_espn_event(game)
+                status_text = str(status).upper()
+                live_badge = "🔴 LIVE" if ("LIVE" in status_text or "IN PROGRESS" in status_text) else ""
+                
+                with st.container(border=True):
+                    col1, col2, col3 = st.columns([2, 1, 2])
+                    with col1:
+                        st.write(f"🏒 **{away_team}**")
+                    with col2:
+                        st.metric("", f"{away_score} - {home_score}", delta=live_badge)
+                    with col3:
+                        st.write(f"🏒 **{home_team}**")
+                    
+                    with st.expander(f"📊 View Player Props & Stats"):
+                        st.markdown("#### 🎯 Top Players")
+                        nhl_players = ["Connor McDavid", "Auston Matthews", "Nathan MacKinnon"]
+                        for player in nhl_players:
+                            if player in BETTING_LINES:
+                                st.markdown(f"**{player}**")
+                                prop_cols = st.columns([2, 2, 1])
+                                with prop_cols[0]:
+                                    pts_line = BETTING_LINES[player].get("Points", 1.5)
+                                    pts_current = BETTING_LINES[player].get("current", {}).get("Points", 1)
+                                    st.write(f"Points: {pts_current}/{pts_line} O/U")
+                                    st.progress(min(pts_current/pts_line, 1.0))
+                                with prop_cols[1]:
+                                    goals_line = BETTING_LINES[player].get("Goals", 0.5)
+                                    assists_line = BETTING_LINES[player].get("Assists", 1.5)
+                                    st.write(f"Goals: {goals_line} | Assists: {assists_line}")
+                                with prop_cols[2]:
+                                    if st.button("➕", key=f"add_nhl_{idx}_{player}"):
+                                        st.session_state.parlay_legs.append({
+                                            'player': player,
+                                            'stat': 'Points',
+                                            'line': pts_line,
+                                            'current': pts_current,
+                                            'odds': -110,
+                                            'game_time': 'Q2',
+                                            'pace': 'High'
+                                        })
+                                        st.success(f"✅ Added {player}!")
+                                st.divider()
+            except Exception as e:
+                pass
+    else:
+        st.info("🏒 Hockey season - Check back during regular season!")
+
+# UFC TAB
+with tabs[5]:
+    st.subheader("🥊 UFC Events - Tap for Fighter Props & Quick-Add")
+    if all_games["ufc"]:
+        for idx, event in enumerate(all_games["ufc"]):
+            try:
+                competitions = event.get("competitions", [{}])
+                fighters = competitions[0].get("competitors", [])
+                if len(fighters) >= 2:
+                    fighter1 = fighters[0].get("athlete", {}).get("displayName", "Fighter 1")
+                    fighter2 = fighters[1].get("athlete", {}).get("displayName", "Fighter 2")
+                    
+                    with st.container(border=True):
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.write(f"🥊 **{fighter1}**")
+                        with col2:
+                            st.metric("", "VS", delta="🔴 LIVE")
+                        with col3:
+                            st.write(f"🥊 **{fighter2}**")
+                        
+                        with st.expander(f"📊 View Fighter Props"):
+                            st.markdown("#### 🎯 Top UFC Fighters")
+                            ufc_fighters = ["Jon Jones", "Islam Makhachev", "Alexander Volkanovski"]
+                            for fighter in ufc_fighters:
+                                if fighter in BETTING_LINES:
+                                    st.markdown(f"**{fighter}**")
+                                    prop_cols = st.columns([2, 2, 1])
+                                    with prop_cols[0]:
+                                        strikes_line = BETTING_LINES[fighter].get("Sig Strikes", 65.5)
+                                        st.write(f"Sig Strikes O/U: {strikes_line}")
+                                    with prop_cols[1]:
+                                        takedowns_line = BETTING_LINES[fighter].get("Takedowns", 2.5)
+                                        st.write(f"Takedowns O/U: {takedowns_line}")
+                                    with prop_cols[2]:
+                                        if st.button("➕", key=f"add_ufc_{idx}_{fighter}"):
+                                            st.session_state.parlay_legs.append({
+                                                'player': fighter,
+                                                'stat': 'Sig Strikes',
+                                                'line': strikes_line,
+                                                'current': 0,
+                                                'odds': -110,
+                                                'game_time': 'Q1',
+                                                'pace': 'High'
+                                            })
+                                            st.success(f"✅ Added {fighter}!")
+                                    st.divider()
+            except Exception as e:
+                pass
+    else:
+        st.info("🥊 No UFC events currently - Check back for upcoming fights!")
+
+# TENNIS TAB
+with tabs[6]:
+    st.subheader("🎾 Tennis Matches - Tap for Player Props & Quick-Add")
+    if all_games["tennis"]:
+        for idx, match in enumerate(all_games["tennis"]):
+            try:
+                competitions = match.get("competitions", [{}])
+                players = competitions[0].get("competitors", [])
+                if len(players) >= 2:
+                    player1 = players[0].get("athlete", {}).get("displayName", "Player 1")
+                    player2 = players[1].get("athlete", {}).get("displayName", "Player 2")
+                    
+                    with st.container(border=True):
+                        col1, col2, col3 = st.columns([2, 1, 2])
+                        with col1:
+                            st.write(f"🎾 **{player1}**")
+                        with col2:
+                            st.metric("", "VS")
+                        with col3:
+                            st.write(f"🎾 **{player2}**")
+                        
+                        with st.expander(f"📊 View Player Props"):
+                            st.markdown("#### 🎯 Top Tennis Players")
+                            tennis_players = ["Novak Djokovic", "Carlos Alcaraz", "Iga Swiatek"]
+                            for player in tennis_players:
+                                if player in BETTING_LINES:
+                                    st.markdown(f"**{player}**")
+                                    prop_cols = st.columns([2, 2, 1])
+                                    with prop_cols[0]:
+                                        aces_line = BETTING_LINES[player].get("Aces", 8.5)
+                                        aces_current = BETTING_LINES[player].get("current", {}).get("Aces", 7)
+                                        st.write(f"Aces: {aces_current}/{aces_line} O/U")
+                                        st.progress(min(aces_current/aces_line, 1.0))
+                                    with prop_cols[1]:
+                                        games_line = BETTING_LINES[player].get("Games Won", 15.5)
+                                        st.write(f"Games Won O/U: {games_line}")
+                                    with prop_cols[2]:
+                                        if st.button("➕", key=f"add_tennis_{idx}_{player}"):
+                                            st.session_state.parlay_legs.append({
+                                                'player': player,
+                                                'stat': 'Aces',
+                                                'line': aces_line,
+                                                'current': aces_current,
+                                                'odds': -110,
+                                                'game_time': 'Q2',
+                                                'pace': 'Medium'
+                                            })
+                                            st.success(f"✅ Added {player}!")
+                                    st.divider()
+            except Exception as e:
+                pass
+    else:
+        st.info("🎾 No live tennis matches - Check back during major tournaments!")
 
 st.markdown("---")
 
