@@ -1761,20 +1761,15 @@ if upcoming_games:
                                 st.caption(f"📊 Ast: {ast_line:.1f} (Avg: {ast_current:.1f}) • {ast_odds:+d}")
                             
                             with prop_display[1]:
-                                # Add buttons for each stat
-                                if st.button("➕ Pts", key=f"add_pts_{game_idx}_{player_name}_away", use_container_width=True):
-                                    st.session_state.parlay_legs.append({
+                                # Add to parlay button
+                                if st.button("➕ Add", key=f"add_player_{game_idx}_{player_name}_away", use_container_width=True):
+                                    st.session_state.temp_player_selection = {
                                         'player': player_name,
                                         'team': away,
-                                        'stat': 'Points',
-                                        'line': pts_line,
-                                        'over_under': 'Over',
-                                        'odds': pts_odds,
-                                        'probability': pts_prob,
-                                        'risk': 'Medium' if pts_prob > 50 else 'High',
                                         'matchup': f"{away} @ {home}",
-                                        'game_time': time_str
-                                    })
+                                        'game_time': time_str,
+                                        'game_id': game_id
+                                    }
                                     st.rerun()
                             
                             st.markdown("---")
@@ -1840,20 +1835,15 @@ if upcoming_games:
                                 st.caption(f"📊 Ast: {ast_line:.1f} (Avg: {ast_current:.1f}) • {ast_odds:+d}")
                             
                             with prop_display[1]:
-                                # Add buttons for each stat
-                                if st.button("➕ Pts", key=f"add_pts_{game_idx}_{player_name}_home", use_container_width=True):
-                                    st.session_state.parlay_legs.append({
+                                # Add to parlay button
+                                if st.button("➕ Add", key=f"add_player_{game_idx}_{player_name}_home", use_container_width=True):
+                                    st.session_state.temp_player_selection = {
                                         'player': player_name,
                                         'team': home,
-                                        'stat': 'Points',
-                                        'line': pts_line,
-                                        'over_under': 'Over',
-                                        'odds': pts_odds,
-                                        'probability': pts_prob,
-                                        'risk': 'Medium' if pts_prob > 50 else 'High',
                                         'matchup': f"{away} @ {home}",
-                                        'game_time': time_str
-                                    })
+                                        'game_time': time_str,
+                                        'game_id': game_id
+                                    }
                                     st.rerun()
                             
                             st.markdown("---")
@@ -1863,6 +1853,60 @@ if upcoming_games:
         except Exception as e:
             st.error(f"Error loading game: {str(e)}")
             pass
+    
+    # Prop selector modal if player was selected
+    if 'temp_player_selection' in st.session_state:
+        player_info = st.session_state.temp_player_selection
+        st.markdown("---")
+        st.markdown(f"### 🎯 Select Props for {player_info['player']}")
+        st.caption(f"{player_info['matchup']} • {player_info['game_time']}")
+        
+        # Prop selection interface
+        prop_cols = st.columns([2, 1, 1, 1])
+        with prop_cols[0]:
+            stat_options = [
+                "Points 15+", "Points 20+", "Points 25+", "Points 30+",
+                "Rebounds 5+", "Rebounds 8+", "Rebounds 10+",
+                "Assists 3+", "Assists 5+", "Assists 8+",
+                "3-Pointers 2+", "3-Pointers 3+",
+                "Double-Double", "Points+Rebounds 25+", "Points+Assists 25+"
+            ]
+            selected_prop = st.selectbox("Prop", stat_options)
+        
+        with prop_cols[1]:
+            over_under = st.selectbox("O/U", ["Over", "Under"])
+        
+        with prop_cols[2]:
+            odds = st.number_input("Odds", value=-110, min_value=-500, max_value=500)
+        
+        with prop_cols[3]:
+            if st.button("✅ Add to Parlay", type="primary", use_container_width=True):
+                # Calculate implied probability
+                if odds < 0:
+                    implied_prob = (-odds) / (-odds + 100) * 100
+                else:
+                    implied_prob = 100 / (odds + 100) * 100
+                
+                # Add to mock parlay
+                st.session_state.mock_parlay_legs.append({
+                    'player': player_info['player'],
+                    'stat': selected_prop,
+                    'over_under': over_under,
+                    'odds': odds,
+                    'implied_prob': implied_prob,
+                    'game_time': player_info['game_time'],
+                    'matchup': player_info['matchup'],
+                    'pace': 'Medium'
+                })
+                del st.session_state.temp_player_selection
+                st.success(f"✅ Added {player_info['player']} - {selected_prop} {over_under} to parlay!")
+                st.rerun()
+        
+        # Cancel button
+        if st.button("❌ Cancel"):
+            del st.session_state.temp_player_selection
+            st.rerun()
+
 else:
     st.warning("📅 No upcoming NBA games found in the next 7 days", icon="⚠️")
     st.caption("ESPN API checked - Try refreshing or checking back later. The API may be down or no games are scheduled.")
