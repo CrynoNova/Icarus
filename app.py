@@ -3091,10 +3091,10 @@ with main_sport_tabs[0]:
                         "3-Pointers 2+", "3-Pointers 3+",
                         "Double-Double", "Points+Rebounds 25+", "Points+Assists 25+"
                     ]
-                    selected_prop = st.selectbox("Prop", stat_options)
+                    selected_prop = st.selectbox("Prop", stat_options, key=f"nfl_prop_select_{player_info['player'].replace(' ', '_')}")
                 
                 with prop_cols[1]:
-                    over_under = st.selectbox("O/U", ["Over", "Under"])
+                    over_under = st.selectbox("O/U", ["Over", "Under"], key=f"nfl_ou_select_{player_info['player'].replace(' ', '_')}")
                 
                 with prop_cols[2]:
                     odds = st.number_input("Odds", value=-110, min_value=-500, max_value=500)
