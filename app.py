@@ -2737,80 +2737,10 @@ with game_sport_tabs[4]:
             st.info("🏒 Unable to fetch NHL data")
     except:
         st.info("🏒 NHL data temporarily unavailable")
-            try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_status = "🔴 LIVE" if "in progress" in status.lower() else status
-                st.markdown(f"**⚽ {away_team} ({away_score}) @ {home_team} ({home_score})** - {game_status}")
-                st.divider()
-            except:
-                pass
-    else:
-        st.info("⚽ No live Soccer games")
 
-with game_sport_tabs[3]:
-    st.caption(f"🔴 LIVE MLB • {datetime.now().strftime('%I:%M:%S %p')}")
-    mlb_games = live_games.get("mlb", [])
-    if mlb_games:
-        st.success(f"✅ {len(mlb_games)} live games • Real-time scores")
-        for idx, event in enumerate(mlb_games[:3]):
-            try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_status = "🔴 LIVE" if "in progress" in status.lower() or "inning" in status.lower() else status
-                st.markdown(f"**⚾ {away_team} ({away_score}) @ {home_team} ({home_score})** - {game_status}")
-                st.divider()
-            except:
-                pass
-    else:
-        st.info("⚾ No live MLB games")
-
-with game_sport_tabs[4]:
-    st.caption(f"🔴 LIVE NHL • {datetime.now().strftime('%I:%M:%S %p')}")
-    nhl_games = live_games.get("nhl", [])
-    if nhl_games:
-        st.success(f"✅ {len(nhl_games)} live games • Real-time scores")
-        for idx, event in enumerate(nhl_games[:3]):
-            try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_status = "🔴 LIVE" if "in progress" in status.lower() or "period" in status.lower() else status
-                st.markdown(f"**🏒 {away_team} ({away_score}) @ {home_team} ({home_score})** - {game_status}")
-                st.divider()
-            except:
-                pass
-    else:
-        st.info("🏒 No live NHL games")
-
-with game_sport_tabs[5]:
-    st.caption(f"🔴 LIVE UFC • {datetime.now().strftime('%I:%M:%S %p')}")
-    ufc_events = live_games.get("ufc", [])
-    if ufc_events:
-        st.success(f"✅ {len(ufc_events)} live fights • Real-time updates")
-        for idx, event in enumerate(ufc_events[:3]):
-            try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_status = "🔴 LIVE" if "in progress" in status.lower() else status
-                st.markdown(f"**🥊 {away_team} vs {home_team}** - {game_status}")
-                st.divider()
-            except:
-                pass
-    else:
-        st.info("🥊 No live UFC events")
-
-with game_sport_tabs[6]:
-    st.caption(f"🔴 LIVE Tennis • {datetime.now().strftime('%I:%M:%S %p')}")
-    tennis_matches = live_games.get("tennis", [])
-    if tennis_matches:
-        st.success(f"✅ {len(tennis_matches)} live matches • Real-time scores")
-        for idx, event in enumerate(tennis_matches[:3]):
-            try:
-                away_team, home_team, away_score, home_score, status = parse_espn_event(event)
-                game_status = "🔴 LIVE" if "in progress" in status.lower() else status
-                st.markdown(f"**🎾 {away_team} ({away_score}) vs {home_team} ({home_score})** - {game_status}")
-                st.divider()
-            except:
-                pass
-    else:
-        st.info("🎾 No live Tennis matches")
-
+# Footer
+st.markdown("---")
+st.caption("🎯 Icarus Parlay Builder • AI-Powered Sports Betting Intelligence • Real-Time ESPN Data")
 st.markdown("---")
 
 # Footer with real-time status
