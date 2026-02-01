@@ -555,15 +555,15 @@ with st.sidebar:
         st.markdown("---")
         st.markdown("#### ⚙️ Settings")
         
-        # 24-hour filter toggle
+        # 48-hour filter toggle
         if 'filter_24h' not in st.session_state:
             st.session_state.filter_24h = True
         
         filter_24h = st.checkbox(
-            "Show only games within 24 hours",
+            "Show only games within 48 hours",
             value=st.session_state.filter_24h,
             key="filter_24h_toggle",
-            help="When enabled, only shows games starting within 24 hours, currently live, or recently finished"
+            help="When enabled, only shows games starting within 48 hours, currently live, or recently finished"
         )
         st.session_state.filter_24h = filter_24h
         
@@ -2045,7 +2045,7 @@ def get_player_projected_line(player_name, stat_type, use_projected=True):
     return 15.0, 12.0, "default"
 
 def is_game_within_24_hours(game_time_str):
-    """Check if game is within 24 hours (past or future) or currently live"""
+    """Check if game is within 48 hours (past or future) or currently live"""
     try:
         if not game_time_str:
             return False
@@ -2059,8 +2059,8 @@ def is_game_within_24_hours(game_time_str):
         # Calculate time difference
         time_diff = abs((game_time - now).total_seconds() / 3600)  # Hours
         
-        # Return True if within 24 hours (before or after)
-        return time_diff <= 24
+        # Return True if within 48 hours (before or after)
+        return time_diff <= 48
     except:
         return False
 
@@ -2099,13 +2099,27 @@ def format_game_time(game_time_str, user_timezone="America/New_York"):
 
 @st.cache_data(ttl=30)
 def get_nfl_games(filter_24h=True):
-    """Fetch NFL games from ESPN API"""
+    """Fetch NFL games from ESPN API - optionally filter to 48h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get('events', [])
+            
+            if filter_24h:
+                # Filter to only games within 48 hours or live
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    
+                    # Include if live or within 48 hours
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                
+                return filtered_events[:10]
+            
             return events[:10]  # Top 10 games
         return []
     except Exception as e:
@@ -2127,7 +2141,7 @@ def get_soccer_games(league="eng.1"):
 
 @st.cache_data(ttl=30)
 def get_mlb_games(filter_24h=True):
-    """Fetch MLB games from ESPN API - optionally filter to 24h window"""
+    """Fetch MLB games from ESPN API - optionally filter to 48h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
         response = requests.get(url, timeout=8)
@@ -2151,7 +2165,7 @@ def get_mlb_games(filter_24h=True):
 
 @st.cache_data(ttl=30)
 def get_nhl_games(filter_24h=True):
-    """Fetch NHL games from ESPN API - optionally filter to 24h window"""
+    """Fetch NHL games from ESPN API - optionally filter to 48h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
         response = requests.get(url, timeout=8)
@@ -2203,7 +2217,7 @@ def get_tennis_matches():
 
 @st.cache_data(ttl=30)
 def get_nba_games(filter_24h=True):
-    """Fetch NBA games from ESPN API - REAL DATA ONLY, optionally filter to 24h window"""
+    """Fetch NBA games from ESPN API - REAL DATA ONLY, optionally filter to 48h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         response = requests.get(url, timeout=8)
@@ -2212,13 +2226,13 @@ def get_nba_games(filter_24h=True):
             events = data.get("events", [])
             
             if filter_24h:
-                # Filter to only games within 24 hours or live
+                # Filter to only games within 48 hours or live
                 filtered_events = []
                 for event in events:
                     date_str = event.get('date')
                     status = event.get('status', {}).get('type', {}).get('state', '')
                     
-                    # Include if live or within 24 hours
+                    # Include if live or within 48 hours
                     if status == 'in' or is_game_within_24_hours(date_str):
                         filtered_events.append(event)
                 
