@@ -2507,7 +2507,20 @@ with game_sport_tabs[0]:
                     # Game expander with enhanced header
                     with st.expander(f"{status_badge} | {away_team} {away_score} @ {home_team} {home_score}", expanded=idx==0 and is_live):
                         st.markdown(f"#### 🏀 {away_team} @ {home_team}")
-                        st.caption(f"📡 Real-time ESPN boxscore data • Game ID: {game_id}")
+                        
+                        # Show team abbreviations and verified roster info
+                        away_abbr = away_data.get("team", {}).get("abbreviation", "")
+                        home_abbr = home_data.get("team", {}).get("abbreviation", "")
+                        
+                        info_cols = st.columns(3)
+                        with info_cols[0]:
+                            st.caption(f"**Away:** {away_team} ({away_abbr})")
+                        with info_cols[1]:
+                            st.caption(f"**Home:** {home_team} ({home_abbr})")
+                        with info_cols[2]:
+                            st.caption(f"📡 Real-time ESPN boxscore • Game ID: {game_id}")
+                        
+                        st.divider()
                         
                         # Fetch detailed boxscore data
                         if game_id and (is_live or is_final):
@@ -2527,16 +2540,20 @@ with game_sport_tabs[0]:
                                     
                                     for team_idx, team_players in enumerate(players_data[:2]):
                                         team_name = team_players.get("team", {}).get("displayName", "")
+                                        team_abbr = team_players.get("team", {}).get("abbreviation", "")
                                         statistics = team_players.get("statistics", [])
                                         
                                         with team_cols[team_idx]:
-                                            st.markdown(f"**{team_name}**")
+                                            st.markdown(f"**{team_name} ({team_abbr})**")
                                             
                                             if statistics:
+                                                # Collect all players first and filter/sort
+                                                all_players = []
+                                                
                                                 for stat_group in statistics:
                                                     athletes = stat_group.get("athletes", [])
                                                     
-                                                    for athlete in athletes[:6]:  # Top 6 per team
+                                                    for athlete in athletes:
                                                         athlete_info = athlete.get("athlete", {})
                                                         player_name = athlete_info.get("displayName", "")
                                                         
@@ -2544,60 +2561,106 @@ with game_sport_tabs[0]:
                                                         stats = athlete.get("stats", [])
                                                         if len(stats) >= 14:
                                                             try:
-                                                                min_played = str(stats[0]) if stats[0] else "0"
+                                                                min_played = float(stats[0]) if stats[0] else 0
                                                                 pts = int(float(stats[13]) if stats[13] else 0)
                                                                 reb = int(float(stats[6]) if stats[6] else 0)
                                                                 ast = int(float(stats[7]) if stats[7] else 0)
-                                                                fg = str(stats[1]) if stats[1] else "0-0"
-                                                                threes = str(stats[2]) if stats[2] else "0-0"
-                                                                stl = int(float(stats[8]) if stats[8] else 0)
-                                                                blk = int(float(stats[9]) if stats[9] else 0)
                                                                 
-                                                                # Get database lines for comparison
-                                                                pts_line = BETTING_LINES.get(player_name, {}).get("Points", 0)
-                                                                reb_line = BETTING_LINES.get(player_name, {}).get("Rebounds", 0)
-                                                                ast_line = BETTING_LINES.get(player_name, {}).get("Assists", 0)
+                                                                # Check if player is in our database
+                                                                in_database = player_name in BETTING_LINES
                                                                 
-                                                                # Display with live indicators
-                                                                with st.container(border=True):
-                                                                    st.markdown(f"**{player_name}** • {min_played} min")
-                                                                    
-                                                                    stat_cols = st.columns([2, 2, 1])
-                                                                    
-                                                                    with stat_cols[0]:
-                                                                        # Points with comparison
-                                                                        if pts_line > 0:
-                                                                            pts_diff = pts - pts_line
-                                                                            if pts >= pts_line:
-                                                                                st.metric("PTS", pts, delta=f"✅ {pts_diff:+.0f}", delta_color="normal")
-                                                                            else:
-                                                                                st.metric("PTS", pts, delta=f"{pts_diff:+.0f} vs {pts_line:.1f}", delta_color="inverse")
-                                                                        else:
-                                                                            st.metric("PTS", pts)
-                                                                        st.caption(f"FG: {fg} | 3PT: {threes}")
-                                                                    
-                                                                    with stat_cols[1]:
-                                                                        # Rebounds and Assists
-                                                                        reb_status = "✅" if reb >= reb_line and reb_line > 0 else "📊"
-                                                                        ast_status = "✅" if ast >= ast_line and ast_line > 0 else "📊"
-                                                                        st.write(f"{reb_status} **REB:** {reb}" + (f" ({reb - reb_line:+.0f})" if reb_line > 0 else ""))
-                                                                        st.write(f"{ast_status} **AST:** {ast}" + (f" ({ast - ast_line:+.0f})" if ast_line > 0 else ""))
-                                                                        st.caption(f"STL: {stl} | BLK: {blk}")
-                                                                    
-                                                                    with stat_cols[2]:
-                                                                        # Quick add buttons with actual stats
-                                                                        if st.button("➕", key=f"live_add_{game_id}_{player_name}_{team_idx}", help="Add to parlay"):
-                                                                            # Determine best prop to add
-                                                                            line_val = pts_line if pts_line > 0 else round_to_betting_line(float(pts))
-                                                                            
-                                                                            st.session_state.parlay_legs.append({
-                                                                                'player': player_name,
-                                                                                'stat': 'Points',
-                                                                                'line': line_val,
-                                                                                'current': float(pts),
-                                                                                'odds': -110,
-                                                                                'game_time': status_badge if is_live else 'Final',
-                                                                                'pace': 'Medium',
+                                                                # Only include players who played significant minutes OR are in database
+                                                                if min_played > 5 or in_database:
+                                                                    all_players.append({
+                                                                        'name': player_name,
+                                                                        'min': min_played,
+                                                                        'pts': pts,
+                                                                        'reb': reb,
+                                                                        'ast': ast,
+                                                                        'fg': str(stats[1]) if stats[1] else "0-0",
+                                                                        'threes': str(stats[2]) if stats[2] else "0-0",
+                                                                        'stl': int(float(stats[8]) if stats[8] else 0),
+                                                                        'blk': int(float(stats[9]) if stats[9] else 0),
+                                                                        'in_database': in_database,
+                                                                        'stats_raw': stats
+                                                                    })
+                                                            except:
+                                                                pass
+                                                
+                                                # Sort: Database players first, then by minutes played
+                                                all_players.sort(key=lambda x: (not x['in_database'], -x['min']))
+                                                
+                                                # Display top 8 players
+                                                for player_data in all_players[:8]:
+                                                    player_name = player_data['name']
+                                                    min_played = player_data['min']
+                                                    pts = player_data['pts']
+                                                    reb = player_data['reb']
+                                                    ast = player_data['ast']
+                                                    fg = player_data['fg']
+                                                    threes = player_data['threes']
+                                                    stl = player_data['stl']
+                                                    blk = player_data['blk']
+                                                    in_database = player_data['in_database']
+                                                    
+                                                    # Get database lines for comparison
+                                                    if in_database:
+                                                        pts_line = BETTING_LINES[player_name].get("Points", 0)
+                                                        reb_line = BETTING_LINES[player_name].get("Rebounds", 0)
+                                                        ast_line = BETTING_LINES[player_name].get("Assists", 0)
+                                                        player_status = "✅"
+                                                    else:
+                                                        # For bench players, use their current stats as "line" for comparison
+                                                        pts_line = 0
+                                                        reb_line = 0
+                                                        ast_line = 0
+                                                        player_status = "⚪"  # Bench player
+                                                    
+                                                    # Display with live indicators
+                                                    with st.container(border=True):
+                                                        if in_database:
+                                                            st.markdown(f"{player_status} **{player_name}** • {min_played:.0f} min")
+                                                        else:
+                                                            st.markdown(f"{player_status} **{player_name}** • {min_played:.0f} min • *Bench*")
+                                                        
+                                                        stat_cols = st.columns([2, 2, 1])
+                                                        
+                                                        with stat_cols[0]:
+                                                            # Points with comparison
+                                                            if pts_line > 0:
+                                                                pts_diff = pts - pts_line
+                                                                if pts >= pts_line:
+                                                                    st.metric("PTS", pts, delta=f"✅ {pts_diff:+.0f}", delta_color="normal")
+                                                                else:
+                                                                    st.metric("PTS", pts, delta=f"{pts_diff:+.0f} vs {pts_line:.1f}", delta_color="inverse")
+                                                            else:
+                                                                st.metric("PTS", pts)
+                                                            st.caption(f"FG: {fg} | 3PT: {threes}")
+                                                        
+                                                        with stat_cols[1]:
+                                                            # Rebounds and Assists
+                                                            if in_database:
+                                                                reb_status = "✅" if reb >= reb_line and reb_line > 0 else "📊"
+                                                                ast_status = "✅" if ast >= ast_line and ast_line > 0 else "📊"
+                                                                st.write(f"{reb_status} **REB:** {reb}" + (f" ({reb - reb_line:+.0f})" if reb_line > 0 else ""))
+                                                                st.write(f"{ast_status} **AST:** {ast}" + (f" ({ast - ast_line:+.0f})" if ast_line > 0 else ""))
+                                                            else:
+                                                                st.write(f"📊 **REB:** {reb}")
+                                                                st.write(f"📊 **AST:** {ast}")
+                                                            st.caption(f"STL: {stl} | BLK: {blk}")
+                                                        
+                                                        with stat_cols[2]:
+                                                            # Only show add button for database players
+                                                            if in_database:
+                                                                if st.button("➕", key=f"live_add_{game_id}_{player_name}_{team_idx}", help="Add to parlay"):
+                                                                    st.session_state.parlay_legs.append({
+                                                                        'player': player_name,
+                                                                        'stat': 'Points',
+                                                                        'line': pts_line,
+                                                                        'current': float(pts),
+                                                                        'odds': -110,
+                                                                        'game_time': status_badge if is_live else 'Final',
+                                                                        'pace': 'Medium',
                                                                                 'probability': 75.0 if pts >= pts_line else 50.0,
                                                                                 'risk': 'Low' if pts >= pts_line else 'Medium'
                                                                             })
