@@ -1893,7 +1893,7 @@ def fetch_all_live_games():
     
     # Soccer
     try:
-        result["soccer"] = get_soccer_games()
+        result["soccer"] = get_soccer_games(filter_24h=filter_24h)
     except:
         result["soccer"] = []
     
@@ -1911,13 +1911,13 @@ def fetch_all_live_games():
     
     # UFC
     try:
-        result["ufc"] = get_ufc_events()
+        result["ufc"] = get_ufc_events(filter_24h=filter_24h)
     except:
         result["ufc"] = []
     
     # Tennis
     try:
-        result["tennis"] = get_tennis_matches()
+        result["tennis"] = get_tennis_matches(filter_24h=filter_24h)
     except:
         result["tennis"] = []
     
@@ -2126,14 +2126,26 @@ def get_nfl_games(filter_24h=True):
         return []
 
 @st.cache_data(ttl=30)
-def get_soccer_games(league="eng.1"):
-    """Fetch Soccer games from ESPN API"""
+def get_soccer_games(league="eng.1", filter_24h=True):
+    """Fetch Soccer games from ESPN API - optionally filter to 48h window"""
     try:
         url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league}/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get('events', [])
+            
+            if filter_24h:
+                # Filter to only games within 48 hours or live
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    # Include if live or within 48 hours
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                return filtered_events[:10]
+            
             return events[:10]  # Top 10 games
         return []
     except Exception as e:
@@ -2188,28 +2200,52 @@ def get_nhl_games(filter_24h=True):
         return []
 
 @st.cache_data(ttl=30)
-def get_ufc_events():
-    """Fetch UFC events from ESPN API"""
+def get_ufc_events(filter_24h=True):
+    """Fetch UFC events from ESPN API - optionally filter to 48h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get('events', [])
+            
+            if filter_24h:
+                # Filter to only events within 48 hours or live
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    # Include if live or within 48 hours
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                return filtered_events[:10]
+            
             return events[:10]
         return []
     except Exception as e:
         return []
 
 @st.cache_data(ttl=30)
-def get_tennis_matches():
-    """Fetch Tennis matches from ESPN API"""
+def get_tennis_matches(filter_24h=True):
+    """Fetch Tennis matches from ESPN API - optionally filter to 48h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get('events', [])
+            
+            if filter_24h:
+                # Filter to only matches within 48 hours or live
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    # Include if live or within 48 hours
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                return filtered_events[:10]
+            
             return events[:10]
         return []
     except Exception as e:
@@ -5477,9 +5513,7 @@ with tabs[0]:
                     away, home, _, _, _ = parse_espn_event(game)
                     start_time = game.get("date", "")
                     if start_time:
-                        from datetime import datetime
-                        game_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-                        time_str = game_time.strftime("%b %d, %I:%M %p ET")
+                        time_str = format_game_time(start_time)
                     else:
                         time_str = "TBD"
                     st.info(f"🏀 **{away} @ {home}** - {time_str}")
