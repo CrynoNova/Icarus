@@ -3094,6 +3094,17 @@ with main_sport_tabs[0]:
                         if not away_players:
                             away_players = get_player_props(away.split()[-1], "NBA")
                         
+                        # CRITICAL: Filter out injured players from ANY source
+                        if away_players:
+                            filtered_away = []
+                            for p in away_players:
+                                player_name = p['name']
+                                injury_status = get_injury_status(player_name, "NBA")
+                                # Exclude OUT players only
+                                if injury_status["status"] != "Out":
+                                    filtered_away.append(p)
+                            away_players = filtered_away
+                        
                         if away_players:
                             for player_data in away_players[:8]:  # Top 8 healthy players
                                 player_name = player_data['name']
@@ -3226,6 +3237,17 @@ with main_sport_tabs[0]:
                         # Fallback to hardcoded if API fails
                         if not home_players:
                             home_players = get_player_props(home.split()[-1], "NBA")
+                        
+                        # CRITICAL: Filter out injured players from ANY source
+                        if home_players:
+                            filtered_home = []
+                            for p in home_players:
+                                player_name = p['name']
+                                injury_status = get_injury_status(player_name, "NBA")
+                                # Exclude OUT players only
+                                if injury_status["status"] != "Out":
+                                    filtered_home.append(p)
+                            home_players = filtered_home
                         
                         if home_players:
                             for player_data in home_players[:8]:  # Top 8 healthy players
