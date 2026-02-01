@@ -1665,67 +1665,338 @@ if mock_mode_enabled:
     if 'mock_parlay_legs' not in st.session_state:
         st.session_state.mock_parlay_legs = []
     
-    # Quick player selection from top players
-    st.markdown("##### 🌟 Top NBA Players - Quick Add")
-    top_players = ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", 
-                   "Luka Doncic", "Jayson Tatum", "Joel Embiid", "Nikola Jokic",
-                   "Damian Lillard", "Anthony Edwards", "Shai Gilgeous-Alexander", "Donovan Mitchell"]
+    # Sport tabs for player selection
+    st.markdown("##### 🌟 Select Sport & Player")
+    mock_sport_tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚾ MLB", "🏒 NHL", "⚽ Soccer", "🥊 UFC", "🎾 Tennis"])
     
-    player_quick_cols = st.columns(4)
-    for idx, player in enumerate(top_players):
-        with player_quick_cols[idx % 4]:
-            if player in BETTING_LINES:
-                pts_avg = BETTING_LINES[player].get("Points", 0)
-                if st.button(f"✅ {player}\n({pts_avg:.1f} PPG)", key=f"mock_quick_{player}", use_container_width=True):
-                    st.session_state.mock_selected_player = player
-                    st.rerun()
+    # NBA Tab
+    with mock_sport_tabs[0]:
+        st.markdown("**Top NBA Players**")
+        nba_players = ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", 
+                       "Luka Doncic", "Jayson Tatum", "Joel Embiid", "Nikola Jokic",
+                       "Damian Lillard", "Anthony Edwards", "Shai Gilgeous-Alexander", "Donovan Mitchell",
+                       "Jaylen Brown", "Anthony Davis", "Devin Booker", "Kawhi Leonard"]
+        
+        nba_cols = st.columns(4)
+        for idx, player in enumerate(nba_players):
+            with nba_cols[idx % 4]:
+                if player in BETTING_LINES:
+                    pts_avg = BETTING_LINES[player].get("Points", 0)
+                    if st.button(f"✅ {player}\n({pts_avg:.1f} PPG)", key=f"mock_nba_{player}", use_container_width=True):
+                        st.session_state.mock_selected_player = player
+                        st.session_state.mock_selected_sport = "NBA"
+                        st.rerun()
+    
+    # NFL Tab
+    with mock_sport_tabs[1]:
+        st.markdown("**Top NFL Players**")
+        nfl_players = ["Patrick Mahomes", "Josh Allen", "Lamar Jackson", "Jalen Hurts",
+                       "Justin Jefferson", "Tyreek Hill", "Travis Kelce", "Christian McCaffrey",
+                       "CeeDee Lamb", "Stefon Diggs", "Derrick Henry", "A.J. Brown",
+                       "Brock Purdy", "Dak Prescott", "Garrett Wilson", "Joe Burrow"]
+        
+        nfl_cols = st.columns(4)
+        for idx, player in enumerate(nfl_players):
+            with nfl_cols[idx % 4]:
+                if player in BETTING_LINES:
+                    key_stat = BETTING_LINES[player].get("Passing Yards", BETTING_LINES[player].get("Receiving Yards", BETTING_LINES[player].get("Rushing Yards", 0)))
+                    stat_label = "Pass YD" if "Passing Yards" in BETTING_LINES[player] else "Rec YD" if "Receiving Yards" in BETTING_LINES[player] else "Rush YD"
+                    if st.button(f"✅ {player}\n({key_stat:.0f} {stat_label})", key=f"mock_nfl_{player}", use_container_width=True):
+                        st.session_state.mock_selected_player = player
+                        st.session_state.mock_selected_sport = "NFL"
+                        st.rerun()
+    
+    # MLB Tab
+    with mock_sport_tabs[2]:
+        st.markdown("**Top MLB Players**")
+        mlb_players = ["Shohei Ohtani", "Ronald Acuña Jr.", "Aaron Judge", "Mookie Betts",
+                       "Freddie Freeman", "Julio Rodríguez", "Juan Soto", "Bryce Harper",
+                       "Fernando Tatis Jr.", "Mike Trout", "Yordan Alvarez", "Pete Alonso",
+                       "José Ramírez", "Manny Machado", "Gerrit Cole", "Sandy Alcantara"]
+        
+        mlb_cols = st.columns(4)
+        for idx, player in enumerate(mlb_players):
+            with mlb_cols[idx % 4]:
+                if player in BETTING_LINES:
+                    key_stat = BETTING_LINES[player].get("Hits", BETTING_LINES[player].get("Strikeouts", 0))
+                    stat_label = "Hits" if "Hits" in BETTING_LINES[player] else "K's"
+                    if st.button(f"✅ {player}\n({key_stat:.1f} {stat_label})", key=f"mock_mlb_{player}", use_container_width=True):
+                        st.session_state.mock_selected_player = player
+                        st.session_state.mock_selected_sport = "MLB"
+                        st.rerun()
+    
+    # NHL Tab
+    with mock_sport_tabs[3]:
+        st.markdown("**Top NHL Players**")
+        nhl_players = ["Connor McDavid", "Auston Matthews", "Nathan MacKinnon", "Leon Draisaitl",
+                       "David Pastrnak", "Nikita Kucherov", "Jack Hughes", "Artemi Panarin",
+                       "Mikko Rantanen", "Matthew Tkachuk", "Sidney Crosby", "Alex Ovechkin",
+                       "Cale Makar", "Quinn Hughes", "Igor Shesterkin", "Connor Hellebuyck"]
+        
+        nhl_cols = st.columns(4)
+        for idx, player in enumerate(nhl_players):
+            with nhl_cols[idx % 4]:
+                if player in BETTING_LINES:
+                    key_stat = BETTING_LINES[player].get("Goals", BETTING_LINES[player].get("Saves", 0))
+                    stat_label = "Goals" if "Goals" in BETTING_LINES[player] else "Saves"
+                    if st.button(f"✅ {player}\n({key_stat:.1f} {stat_label})", key=f"mock_nhl_{player}", use_container_width=True):
+                        st.session_state.mock_selected_player = player
+                        st.session_state.mock_selected_sport = "NHL"
+                        st.rerun()
+    
+    # Soccer Tab
+    with mock_sport_tabs[4]:
+        st.markdown("**Top Soccer Players**")
+        soccer_players = ["Erling Haaland", "Kylian Mbappé", "Lionel Messi", "Cristiano Ronaldo",
+                          "Harry Kane", "Mohamed Salah", "Kevin De Bruyne", "Vinícius Júnior",
+                          "Robert Lewandowski", "Jude Bellingham", "Bukayo Saka", "Phil Foden",
+                          "Rodri", "Bruno Fernandes", "Lautaro Martínez", "Victor Osimhen"]
+        
+        soccer_cols = st.columns(4)
+        for idx, player in enumerate(soccer_players):
+            with soccer_cols[idx % 4]:
+                if player in BETTING_LINES:
+                    key_stat = BETTING_LINES[player].get("Goals", 0)
+                    if st.button(f"✅ {player}\n({key_stat:.1f} Goals)", key=f"mock_soccer_{player}", use_container_width=True):
+                        st.session_state.mock_selected_player = player
+                        st.session_state.mock_selected_sport = "Soccer"
+                        st.rerun()
+    
+    # UFC Tab
+    with mock_sport_tabs[5]:
+        st.markdown("**Top UFC Fighters**")
+        ufc_fighters = ["Jon Jones", "Islam Makhachev", "Alexander Volkanovski", "Israel Adesanya",
+                        "Alex Pereira", "Charles Oliveira", "Leon Edwards", "Sean O'Malley",
+                        "Ilia Topuria", "Tom Aspinall", "Dricus Du Plessis", "Alexandre Pantoja",
+                        "Belal Muhammad", "Max Holloway", "Sean Strickland", "Merab Dvalishvili"]
+        
+        ufc_cols = st.columns(4)
+        for idx, fighter in enumerate(ufc_fighters):
+            with ufc_cols[idx % 4]:
+                if fighter in BETTING_LINES:
+                    sig_strikes = BETTING_LINES[fighter].get("Significant Strikes", 0)
+                    if st.button(f"✅ {fighter}\n({sig_strikes:.0f} Strikes)", key=f"mock_ufc_{fighter}", use_container_width=True):
+                        st.session_state.mock_selected_player = fighter
+                        st.session_state.mock_selected_sport = "UFC"
+                        st.rerun()
+    
+    # Tennis Tab
+    with mock_sport_tabs[6]:
+        st.markdown("**Top Tennis Players**")
+        tennis_players = ["Novak Djokovic", "Carlos Alcaraz", "Jannik Sinner", "Daniil Medvedev",
+                          "Iga Swiatek", "Aryna Sabalenka", "Coco Gauff", "Elena Rybakina",
+                          "Holger Rune", "Andrey Rublev", "Jessica Pegula", "Ons Jabeur",
+                          "Alexander Zverev", "Stefanos Tsitsipas", "Taylor Fritz", "Casper Ruud"]
+        
+        tennis_cols = st.columns(4)
+        for idx, player in enumerate(tennis_players):
+            with tennis_cols[idx % 4]:
+                if player in BETTING_LINES:
+                    aces = BETTING_LINES[player].get("Aces", 0)
+                    if st.button(f"✅ {player}\n({aces:.1f} Aces)", key=f"mock_tennis_{player}", use_container_width=True):
+                        st.session_state.mock_selected_player = player
+                        st.session_state.mock_selected_sport = "Tennis"
+                        st.rerun()
     
     # If player selected, show prop selection
     if 'mock_selected_player' in st.session_state and st.session_state.mock_selected_player:
         player_name = st.session_state.mock_selected_player
+        selected_sport = st.session_state.get('mock_selected_sport', 'NBA')
         
-        st.markdown(f"#### 📊 {player_name} - Select Props")
+        st.markdown(f"#### 📊 {player_name} ({selected_sport}) - Select Props")
         
         # Get all available props for this player
         if player_name in BETTING_LINES:
             player_data = BETTING_LINES[player_name]
             
-            # Show player season averages
-            avg_cols = st.columns(5)
-            with avg_cols[0]:
-                st.metric("Points", f"{player_data.get('Points', 0):.1f}")
-            with avg_cols[1]:
-                st.metric("Rebounds", f"{player_data.get('Rebounds', 0):.1f}")
-            with avg_cols[2]:
-                st.metric("Assists", f"{player_data.get('Assists', 0):.1f}")
-            with avg_cols[3]:
-                st.metric("3PM", f"{player_data.get('3-Pointers', 0):.1f}")
-            with avg_cols[4]:
-                st.metric("Stocks", f"{player_data.get('Steals', 0) + player_data.get('Blocks', 0):.1f}")
+            # Show player season averages based on sport
+            st.markdown("---")
+            
+            if selected_sport == "NBA":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Points", f"{player_data.get('Points', 0):.1f}")
+                with avg_cols[1]:
+                    st.metric("Rebounds", f"{player_data.get('Rebounds', 0):.1f}")
+                with avg_cols[2]:
+                    st.metric("Assists", f"{player_data.get('Assists', 0):.1f}")
+                with avg_cols[3]:
+                    st.metric("3PM", f"{player_data.get('3-Pointers', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Stocks", f"{player_data.get('Steals', 0) + player_data.get('Blocks', 0):.1f}")
+            
+            elif selected_sport == "NFL":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Pass Yds", f"{player_data.get('Passing Yards', 0):.0f}")
+                with avg_cols[1]:
+                    st.metric("Rush Yds", f"{player_data.get('Rushing Yards', 0):.0f}")
+                with avg_cols[2]:
+                    st.metric("Rec Yds", f"{player_data.get('Receiving Yards', 0):.0f}")
+                with avg_cols[3]:
+                    st.metric("TDs", f"{player_data.get('Touchdowns', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Receptions", f"{player_data.get('Receptions', 0):.1f}")
+            
+            elif selected_sport == "MLB":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Hits", f"{player_data.get('Hits', 0):.1f}")
+                with avg_cols[1]:
+                    st.metric("HRs", f"{player_data.get('Home Runs', 0):.1f}")
+                with avg_cols[2]:
+                    st.metric("RBIs", f"{player_data.get('RBIs', 0):.1f}")
+                with avg_cols[3]:
+                    st.metric("Strikeouts", f"{player_data.get('Strikeouts', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Runs", f"{player_data.get('Runs', 0):.1f}")
+            
+            elif selected_sport == "NHL":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Goals", f"{player_data.get('Goals', 0):.1f}")
+                with avg_cols[1]:
+                    st.metric("Assists", f"{player_data.get('Assists', 0):.1f}")
+                with avg_cols[2]:
+                    st.metric("Points", f"{player_data.get('Points', 0):.1f}")
+                with avg_cols[3]:
+                    st.metric("Shots", f"{player_data.get('Shots', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Saves", f"{player_data.get('Saves', 0):.0f}")
+            
+            elif selected_sport == "Soccer":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Goals", f"{player_data.get('Goals', 0):.1f}")
+                with avg_cols[1]:
+                    st.metric("Assists", f"{player_data.get('Assists', 0):.1f}")
+                with avg_cols[2]:
+                    st.metric("Shots", f"{player_data.get('Shots', 0):.1f}")
+                with avg_cols[3]:
+                    st.metric("Key Passes", f"{player_data.get('Key Passes', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Tackles", f"{player_data.get('Tackles', 0):.1f}")
+            
+            elif selected_sport == "UFC":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Sig Strikes", f"{player_data.get('Significant Strikes', 0):.0f}")
+                with avg_cols[1]:
+                    st.metric("Takedowns", f"{player_data.get('Takedowns', 0):.1f}")
+                with avg_cols[2]:
+                    st.metric("Knockdowns", f"{player_data.get('Knockdowns', 0):.1f}")
+                with avg_cols[3]:
+                    st.metric("Submission Att", f"{player_data.get('Submission Attempts', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Ctrl Time", f"{player_data.get('Control Time', 0):.1f} min")
+            
+            elif selected_sport == "Tennis":
+                avg_cols = st.columns(5)
+                with avg_cols[0]:
+                    st.metric("Aces", f"{player_data.get('Aces', 0):.1f}")
+                with avg_cols[1]:
+                    st.metric("Double Faults", f"{player_data.get('Double Faults', 0):.1f}")
+                with avg_cols[2]:
+                    st.metric("1st Serve %", f"{player_data.get('First Serve %', 0):.0f}%")
+                with avg_cols[3]:
+                    st.metric("Break Points", f"{player_data.get('Break Points', 0):.1f}")
+                with avg_cols[4]:
+                    st.metric("Games Won", f"{player_data.get('Games Won', 0):.1f}")
             
             st.markdown("---")
             
-            # Prop selection interface
+            # Prop selection interface - Sport specific
             prop_cols = st.columns([2, 2, 1, 1])
             with prop_cols[0]:
-                # Stat type selection - ALL major props
-                stat_options = [
-                    "Points 15+", "Points 18+", "Points 20+", "Points 22+", "Points 25+", "Points 27+", "Points 30+", "Points 32+", "Points 35+", "Points 40+",
-                    "Rebounds 5+", "Rebounds 6+", "Rebounds 8+", "Rebounds 10+", "Rebounds 12+", "Rebounds 15+",
-                    "Assists 3+", "Assists 4+", "Assists 5+", "Assists 6+", "Assists 8+", "Assists 10+", "Assists 12+", "Assists 15+",
-                    "3-Pointers 1+", "3-Pointers 2+", "3-Pointers 3+", "3-Pointers 4+", "3-Pointers 5+", "3-Pointers 6+",
-                    "Steals 1+", "Steals 2+", "Steals 3+",
-                    "Blocks 1+", "Blocks 2+", "Blocks 3+",
-                    "Stocks 2+", "Stocks 3+", "Stocks 4+",
-                    "Double-Double", "Triple-Double", "Points+Rebounds DD", "Points+Assists DD", "Rebounds+Assists DD",
-                    "Pts+Reb 25+", "Pts+Reb 30+", "Pts+Reb 35+", "Pts+Reb 40+",
-                    "Pts+Ast 25+", "Pts+Ast 30+", "Pts+Ast 35+", "Pts+Ast 40+",
-                    "Reb+Ast 10+", "Reb+Ast 12+", "Reb+Ast 15+",
-                    "Full 5-Stat (40+)", "Full 5-Stat (45+)", "Full 5-Stat (50+)",
-                    "Turnovers Under 3", "Turnovers Under 4",
-                    "Minutes 30+", "Minutes 35+",
-                    "Fantasy Points 30+", "Fantasy Points 35+", "Fantasy Points 40+", "Fantasy Points 45+", "Fantasy Points 50+"
-                ]
+                # Stat type selection based on sport
+                if selected_sport == "NBA":
+                    stat_options = [
+                        "Points 15+", "Points 18+", "Points 20+", "Points 22+", "Points 25+", "Points 27+", "Points 30+", "Points 32+", "Points 35+", "Points 40+",
+                        "Rebounds 5+", "Rebounds 6+", "Rebounds 8+", "Rebounds 10+", "Rebounds 12+", "Rebounds 15+",
+                        "Assists 3+", "Assists 4+", "Assists 5+", "Assists 6+", "Assists 8+", "Assists 10+", "Assists 12+", "Assists 15+",
+                        "3-Pointers 1+", "3-Pointers 2+", "3-Pointers 3+", "3-Pointers 4+", "3-Pointers 5+", "3-Pointers 6+",
+                        "Steals 1+", "Steals 2+", "Steals 3+",
+                        "Blocks 1+", "Blocks 2+", "Blocks 3+",
+                        "Stocks 2+", "Stocks 3+", "Stocks 4+",
+                        "Double-Double", "Triple-Double", "Points+Rebounds DD", "Points+Assists DD",
+                        "Pts+Reb 25+", "Pts+Reb 30+", "Pts+Reb 35+", "Pts+Reb 40+",
+                        "Pts+Ast 25+", "Pts+Ast 30+", "Pts+Ast 35+", "Pts+Ast 40+",
+                        "Fantasy Points 30+", "Fantasy Points 40+", "Fantasy Points 50+"
+                    ]
+                elif selected_sport == "NFL":
+                    stat_options = [
+                        "Passing Yards 200+", "Passing Yards 225+", "Passing Yards 250+", "Passing Yards 275+", "Passing Yards 300+", "Passing Yards 325+", "Passing Yards 350+",
+                        "Rushing Yards 40+", "Rushing Yards 50+", "Rushing Yards 60+", "Rushing Yards 75+", "Rushing Yards 100+", "Rushing Yards 125+",
+                        "Receiving Yards 40+", "Receiving Yards 50+", "Receiving Yards 60+", "Receiving Yards 75+", "Receiving Yards 100+", "Receiving Yards 125+",
+                        "Receptions 3+", "Receptions 4+", "Receptions 5+", "Receptions 6+", "Receptions 7+", "Receptions 8+",
+                        "Pass TDs 1+", "Pass TDs 2+", "Pass TDs 3+",
+                        "Rush TDs 1+", "Rush TDs 2+",
+                        "Rec TDs 1+", "Rec TDs 2+",
+                        "Anytime TD", "2+ TDs", "3+ TDs",
+                        "Pass Completions 20+", "Pass Completions 25+", "Pass Completions 30+",
+                        "Interceptions Under 1", "Interceptions Under 2"
+                    ]
+                elif selected_sport == "MLB":
+                    stat_options = [
+                        "Hits 1+", "Hits 2+", "Hits 3+",
+                        "Total Bases 1+", "Total Bases 2+", "Total Bases 3+",
+                        "Home Runs 1+", "Home Runs 2+",
+                        "RBIs 1+", "RBIs 2+", "RBIs 3+",
+                        "Runs 1+", "Runs 2+", "Runs 3+",
+                        "Strikeouts (Pitcher) 4+", "Strikeouts (Pitcher) 5+", "Strikeouts (Pitcher) 6+", "Strikeouts (Pitcher) 7+", "Strikeouts (Pitcher) 8+",
+                        "Walks Under 2", "Walks Under 3",
+                        "Stolen Bases 1+", "Stolen Bases 2+",
+                        "Doubles 1+", "Doubles 2+",
+                        "Hit + Run + RBI", "Home Run + RBI"
+                    ]
+                elif selected_sport == "NHL":
+                    stat_options = [
+                        "Goals 1+", "Goals 2+", "Goals 3+",
+                        "Assists 1+", "Assists 2+", "Assists 3+",
+                        "Points 1+", "Points 2+", "Points 3+",
+                        "Shots 2+", "Shots 3+", "Shots 4+", "Shots 5+",
+                        "Saves 20+", "Saves 25+", "Saves 30+", "Saves 35+",
+                        "Goal + Assist", "Power Play Point",
+                        "Blocked Shots 2+", "Blocked Shots 3+",
+                        "Hits 2+", "Hits 3+", "Hits 4+"
+                    ]
+                elif selected_sport == "Soccer":
+                    stat_options = [
+                        "Goals 1+", "Goals 2+", "Goals 3+",
+                        "Assists 1+", "Assists 2+",
+                        "Shots 2+", "Shots 3+", "Shots 4+", "Shots 5+",
+                        "Shots on Target 1+", "Shots on Target 2+", "Shots on Target 3+",
+                        "Goal + Assist", "Anytime Goal Scorer",
+                        "Key Passes 2+", "Key Passes 3+",
+                        "Tackles 2+", "Tackles 3+", "Tackles 4+",
+                        "Fouls Committed Under 2", "Fouls Committed Under 3",
+                        "Yellow Card", "Red Card"
+                    ]
+                elif selected_sport == "UFC":
+                    stat_options = [
+                        "Significant Strikes 50+", "Significant Strikes 75+", "Significant Strikes 100+", "Significant Strikes 125+",
+                        "Total Strikes 60+", "Total Strikes 90+", "Total Strikes 120+",
+                        "Takedowns 1+", "Takedowns 2+", "Takedowns 3+",
+                        "Knockdowns 1+", "Knockdowns 2+",
+                        "Submission Attempts 1+", "Submission Attempts 2+",
+                        "Control Time 2+ min", "Control Time 3+ min", "Control Time 4+ min",
+                        "Fight to go distance", "Fight ends in Round 1", "Fight ends in Round 2",
+                        "Win by KO/TKO", "Win by Submission", "Win by Decision"
+                    ]
+                elif selected_sport == "Tennis":
+                    stat_options = [
+                        "Aces 3+", "Aces 5+", "Aces 7+", "Aces 10+",
+                        "Double Faults Under 2", "Double Faults Under 3", "Double Faults Under 4",
+                        "Break Points Won 2+", "Break Points Won 3+", "Break Points Won 4+",
+                        "Games Won 10+", "Games Won 12+", "Games Won 15+",
+                        "Sets Won 2+", "Win in Straight Sets",
+                        "Total Games Over 21.5", "Total Games Over 23.5",
+                        "First Set Winner", "Match Winner",
+                        "Tiebreak in Match"
+                    ]
+                else:
+                    stat_options = ["Points 20+", "Assists 5+", "Goals 1+"]
+                
                 selected_stat = st.selectbox("Stat Type", stat_options, key="mock_stat")
             
             with prop_cols[1]:
