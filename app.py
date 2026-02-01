@@ -2293,17 +2293,20 @@ def get_nba_team_roster(team_id):
                 for athlete in athlete_group.get("items", []):
                     player_name = athlete.get("fullName", "")
                     
-                    # Check injury/status
+                    # Check injury/status from roster data
                     injuries = athlete.get("injuries", [])
                     status = athlete.get("status", {}).get("type", "")
                     
                     # Only include healthy, active players
                     is_injured = len(injuries) > 0
-                    is_active = status.lower() == "active" if status else True  # Default to active if no status
+                    is_active = status.lower() == "active" if status else True
                     
+                    # Double-check with injury API for comprehensive filtering
                     if player_name and is_active and not is_injured:
-                        players.append(player_name)
-            return players[:15]  # Top 15 healthy players
+                        injury_check = get_injury_status(player_name, "NBA")
+                        if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                            players.append(player_name)
+            return players  # Return all healthy players
     except:
         pass
     return []
@@ -2344,16 +2347,19 @@ def get_nfl_team_roster(team_id, max_retries=3):
                         is_active = status.lower() == "active"
                         
                         if player_name and position and is_active and not is_injured:
-                            players.append({
-                                "name": player_name, 
-                                "position": position,
-                                "id": athlete.get("id", ""),
-                                "jersey": athlete.get("jersey", ""),
-                                "status": status
-                            })
+                            # Double-check with injury API
+                            injury_check = get_injury_status(player_name, "NFL")
+                            if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                                players.append({
+                                    "name": player_name, 
+                                    "position": position,
+                                    "id": athlete.get("id", ""),
+                                    "jersey": athlete.get("jersey", ""),
+                                    "status": "Healthy"
+                                })
                 
                 if players:
-                    return players[:30]  # Return top 30 healthy players from API
+                    return players  # Return all healthy players from API
                     
             elif response.status_code == 429:  # Rate limited
                 time.sleep(2 ** attempt)  # Exponential backoff
@@ -2449,16 +2455,19 @@ def get_mlb_team_roster(team_id, max_retries=3):
                         is_active = status.lower() == "active" if status else True
                         
                         if player_name and position and is_active and not is_injured:
-                            players.append({
-                                "name": player_name,
-                                "position": position,
-                                "id": athlete.get("id", ""),
-                                "jersey": athlete.get("jersey", ""),
-                                "status": status
-                            })
+                            # Double-check with injury API
+                            injury_check = get_injury_status(player_name, "MLB")
+                            if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                                players.append({
+                                    "name": player_name,
+                                    "position": position,
+                                    "id": athlete.get("id", ""),
+                                    "jersey": athlete.get("jersey", ""),
+                                    "status": "Healthy"
+                                })
                 
                 if players:
-                    return players[:25]  # Return top 25 healthy players
+                    return players  # Return all healthy players
                     
             elif response.status_code == 429:
                 time.sleep(2 ** attempt)
@@ -2505,16 +2514,19 @@ def get_nhl_team_roster(team_id, max_retries=3):
                         is_active = status.lower() == "active" if status else True
                         
                         if player_name and position and is_active and not is_injured:
-                            players.append({
-                                "name": player_name,
-                                "position": position,
-                                "id": athlete.get("id", ""),
-                                "jersey": athlete.get("jersey", ""),
-                                "status": status
-                            })
+                            # Double-check with injury API
+                            injury_check = get_injury_status(player_name, "NHL")
+                            if injury_check["status"] == "Healthy" or injury_check["impact"] >= 0.85:
+                                players.append({
+                                    "name": player_name,
+                                    "position": position,
+                                    "id": athlete.get("id", ""),
+                                    "jersey": athlete.get("jersey", ""),
+                                    "status": "Healthy"
+                                })
                 
                 if players:
-                    return players[:25]  # Return top 25 healthy players
+                    return players  # Return all healthy players
                     
             elif response.status_code == 429:
                 time.sleep(2 ** attempt)
@@ -4297,75 +4309,69 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
     
     # NBA Tab
     with sport_tabs[0]:
-        # Use our curated rosters with all 80+ NBA players
-        nba_teams = ["Lakers", "Warriors", "Celtics", "76ers", "Nuggets", "Bucks", "Mavericks", "Suns", 
-                     "Clippers", "Heat", "Grizzlies", "Cavaliers", "Thunder", "Hawks", "Kings", "Pelicans",
-                     "Timberwolves", "Pacers", "Knicks", "Magic", "Spurs", "Rockets", "Raptors", "Jazz",
-                     "Nets", "Bulls", "Trail Blazers", "Wizards", "Hornets", "Pistons"]
+        # NBA teams with ESPN API team IDs
+        nba_teams = [
+            {"name": "Lakers", "id": "13"}, {"name": "Warriors", "id": "9"}, 
+            {"name": "Celtics", "id": "2"}, {"name": "76ers", "id": "20"},
+            {"name": "Nuggets", "id": "7"}, {"name": "Bucks", "id": "15"},
+            {"name": "Mavericks", "id": "6"}, {"name": "Suns", "id": "21"},
+            {"name": "Clippers", "id": "12"}, {"name": "Heat", "id": "14"},
+            {"name": "Grizzlies", "id": "29"}, {"name": "Cavaliers", "id": "5"},
+            {"name": "Thunder", "id": "25"}, {"name": "Hawks", "id": "1"},
+            {"name": "Kings", "id": "23"}, {"name": "Pelicans", "id": "3"}
+        ]
         
-        team_tabs_nba = st.tabs(nba_teams)
+        team_tabs_nba = st.tabs([team["name"] for team in nba_teams])
         for idx, team in enumerate(nba_teams):
             with team_tabs_nba[idx]:
-                # Use our curated roster from team_players mapping
-                players = get_player_props(team, "NBA")
-                if players:
-                    # Check for live ESPN data
-                    live_team_data = get_team_live_stats(team)
-                    has_live_data = len(live_team_data) > 0
+                team_name = team["name"]
+                team_id = team["id"]
+                
+                # Fetch real roster from ESPN API
+                players = get_nba_team_roster(team_id)
+                
+                if players and len(players) > 0:
+                    st.caption(f"📋 {len(players)} active players • 📡 ESPN API • ✅ Healthy only")
                     
-                    # Show data source indicator
-                    if has_live_data:
-                        st.caption(f"🔴 LIVE • 📋 {len(players)} players • 📡 ESPN Real-Time Data")
-                    else:
-                        data_source = "🏆 Database" if any(p['name'] in BETTING_LINES for p in players) else "📡 API"
-                        st.caption(f"📋 {len(players)} players • {data_source} • Season Averages")
-                    
-                    for player in players:
-                        # Try to get ESPN live data first
-                        live_stats = get_live_player_stats_from_scoreboard(player['name'])
-                        
-                        # Get real-time stats for player (prioritizes ESPN)
-                        player_line, player_current = get_betting_line(player['name'], 'Points')
-                        
+                    for player_name in players[:10]:  # Show top 10
                         # Sanitize player name for key (remove spaces and special chars)
-                        player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                        player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
+                        
+                        # Get real-time stats for player
+                        player_line, player_current = get_betting_line(player_name, 'Points')
                         
                         col1, col2, col3 = st.columns([3, 1, 1])
                         with col1:
-                            # Show data source badge
-                            if live_stats and live_stats.get('source') == 'ESPN_LIVE':
-                                badge = "🔴"  # Live ESPN data
-                            elif player['name'] in BETTING_LINES:
-                                badge = "✅"  # Verified database
-                            else:
-                                badge = "⚪"  # Fallback
-                            
-                            if st.button(f"{badge} {player['name']}", key=f"nba_{team}_{player_key}", use_container_width=True):
-                                selected_player = player['name']
+                            # Show player with data badge
+                            badge = "✅" if player_name in BETTING_LINES else "📡"
+                            if st.button(f"{badge} {player_name}", key=f"nba_{team_name}_{player_key}", use_container_width=True):
+                                selected_player = player_name
                         with col2:
-                            # Show current with data source
-                            source_icon = "🔴" if live_stats else "📊"
-                            st.caption(f"{source_icon} {player_current} pts")
+                            st.caption(f"📊 {player_current} pts")
                         with col3:
                             st.caption(f"📈 {player_line} O/U")
                 else:
-                    st.info(f"No players configured for {team}")
+                    st.warning(f"⚠️ Unable to fetch {team_name} roster from ESPN API")
+                    if st.button(f"🔄 Retry {team_name}", key=f"retry_nba_{team_id}"):
+                        st.cache_data.clear()
+                        st.rerun()
     
     # NFL Tab
     with sport_tabs[1]:
+        st.info("🏈 Browse by team - Real rosters load in game sections above")
         nfl_teams = ["Chiefs", "Bills", "49ers", "Dolphins", "Ravens", "Eagles", "Bengals", "Vikings",
-                     "Cowboys", "Giants", "Raiders", "Jets", "Lions", "Packers", "Titans", "Chargers"]
+                    "Cowboys", "Giants", "Raiders", "Jets", "Lions", "Packers", "Titans", "Chargers"]
         team_tabs_nfl = st.tabs(nfl_teams)
         for idx, team in enumerate(nfl_teams):
             with team_tabs_nfl[idx]:
                 players = get_player_props(team, "NFL")
                 if players:
-                    for player in players:
-                        if st.button(f"👤 {player['name']}", key=f"nfl_{team}_{player['name']}", use_container_width=True):
+                    st.caption("📋 Quick browse - Check live games above for full rosters")
                             selected_player = player['name']
     
     # Soccer Tab
     with sport_tabs[2]:
+        st.info("⚽ Browse top players - Real rosters load in live game sections above")
         soccer_teams = ["Man City", "Liverpool", "Arsenal", "Chelsea", "Real Madrid", "Barcelona", 
                        "Bayern Munich", "PSG", "Inter Milan", "AC Milan"]
         team_tabs_soccer = st.tabs(soccer_teams)
@@ -4373,6 +4379,7 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
             with team_tabs_soccer[idx]:
                 players = get_player_props(team, "Soccer")
                 if players:
+                    st.caption("📋 Quick browse - Check live games for full squads")
                     for player in players:
                         # Sanitize player name for key (remove spaces and special chars)
                         player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
@@ -4381,6 +4388,7 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
     
     # MLB Tab
     with sport_tabs[3]:
+        st.info("⚾ Browse by team - Real rosters load in game sections above")
         mlb_teams = ["Dodgers", "Yankees", "Braves", "Astros", "Mariners", "Blue Jays", "Phillies", 
                     "Padres", "Angels", "Mets", "Red Sox", "Rangers", "Brewers", "Marlins"]
         team_tabs_mlb = st.tabs(mlb_teams)
@@ -4388,12 +4396,14 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
             with team_tabs_mlb[idx]:
                 players = get_player_props(team, "MLB")
                 if players:
+                    st.caption("📋 Quick browse - Check live games for full rosters")
                     for player in players:
                         if st.button(f"👤 {player['name']}", key=f"mlb_{team}_{player['name']}", use_container_width=True):
                             selected_player = player['name']
     
     # NHL Tab
     with sport_tabs[4]:
+        st.info("🏒 Browse by team - Real rosters load in game sections above")
         nhl_teams = ["Oilers", "Maple Leafs", "Avalanche", "Bruins", "Lightning", "Panthers", 
                     "Rangers", "Devils", "Jets", "Wild", "Penguins", "Capitals", "Canucks", "Senators", "Stars"]
         team_tabs_nhl = st.tabs(nhl_teams)
@@ -4401,6 +4411,7 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
             with team_tabs_nhl[idx]:
                 players = get_player_props(team, "NHL")
                 if players:
+                    st.caption("📋 Quick browse - Check live games for full rosters")
                     for player in players:
                         # Sanitize player name for key (remove spaces and special chars)
                         player_key = player['name'].replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
@@ -6140,6 +6151,10 @@ with game_sport_tabs[0]:
                                         team_short = team_name.split()[-1]
                                         players = get_player_props(team_short, "NBA")
                                         
+                                        if not players:
+                                            st.caption("⚠️ Roster will load when game starts")
+                                            continue
+                                        
                                         for player in players[:5]:
                                             player_name = player['name']
                                             
@@ -6258,6 +6273,10 @@ with game_sport_tabs[1]:
                                         st.markdown(f"**{team_name}**")
                                         team_short = team_name.split()[-1]
                                         players = get_player_props(team_short, "NFL")
+                                        
+                                        if not players:
+                                            st.caption("⚠️ Roster will load when game starts")
+                                            continue
                                         
                                         for player in players[:3]:
                                             player_name = player['name']
