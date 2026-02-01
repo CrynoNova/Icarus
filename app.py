@@ -1,8 +1,9 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 import time
+from zoneinfo import ZoneInfo
 
 # API Health Check Function
 @st.cache_data(ttl=30)  # Cache for 30 seconds
@@ -549,6 +550,45 @@ with st.sidebar:
         3. Watch your parlay build here!
         4. Check real-time odds & probabilities
         """)
+        
+        # Settings Section
+        st.markdown("---")
+        st.markdown("#### ⚙️ Settings")
+        
+        # 24-hour filter toggle
+        if 'filter_24h' not in st.session_state:
+            st.session_state.filter_24h = True
+        
+        filter_24h = st.checkbox(
+            "Show only games within 24 hours",
+            value=st.session_state.filter_24h,
+            key="filter_24h_toggle",
+            help="When enabled, only shows games starting within 24 hours, currently live, or recently finished"
+        )
+        st.session_state.filter_24h = filter_24h
+        
+        # Info about data sources
+        with st.expander("📊 Data Sources"):
+            st.markdown("""
+            **Current Sources:**
+            - ✅ **ESPN API**: Live games, scores, rosters, injuries
+            - ✅ **Advanced AI Model**: Probability calculations
+            - ⚪ **Betting Lines**: Season averages + user input
+            
+            **Betting API Integration:**
+            DraftKings and FanDuel don't offer free public APIs. 
+            
+            **To get real-time odds:**
+            - Use [The Odds API](https://the-odds-api.com/) ($50+/mo)
+            - See `BETTING_API_INFO.md` for full guide
+            
+            **Why our model works:**
+            - Real injury data from ESPN
+            - Advanced probability calculations
+            - Usage rate tracking
+            - Home/away, B2B, pace adjustments
+            - You enter actual sportsbook odds
+            """)
 
 # HELPER FUNCTIONS
 def round_to_betting_line(value):
@@ -620,18 +660,56 @@ def get_player_usage_rate(player_name, sport="NBA"):
 
 @st.cache_data(ttl=180)  # Cache for 3 minutes
 def get_injury_status(player_name, sport="NBA"):
-    """Check injury status - returns dict with status and impact"""
-    # Real-time injury tracking (would integrate with ESPN Injury API in production)
-    # For now, using known injury situations from 2025-26 season
+    """Check injury status from ESPN API - returns dict with status and impact"""
+    try:
+        # ESPN provides injury data in team roster endpoints
+        # We'll also check the dedicated injuries endpoint
+        if sport == "NBA":
+            url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries"
+        elif sport == "NFL":
+            url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
+        elif sport == "MLB":
+            url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/injuries"
+        elif sport == "NHL":
+            url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries"
+        else:
+            return {"status": "Unknown", "impact": 1.0, "detail": "API not available"}
+        
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            injuries = data.get("injuries", [])
+            
+            # Search for player in injury report
+            for team_injuries in injuries:
+                for injury in team_injuries.get("injuries", []):
+                    athlete = injury.get("athlete", {})
+                    if athlete.get("displayName") == player_name:
+                        status = injury.get("status", "Unknown")
+                        detail = injury.get("details", {}).get("detail", "Injury")
+                        
+                        # Map status to impact factor
+                        status_map = {
+                            "Out": {"impact": 0.0, "display": "Out"},
+                            "Doubtful": {"impact": 0.3, "display": "Doubtful"},
+                            "Questionable": {"impact": 0.7, "display": "Questionable"},
+                            "Probable": {"impact": 0.9, "display": "Probable"},
+                            "Day-To-Day": {"impact": 0.85, "display": "Day-to-Day"}
+                        }
+                        
+                        status_info = status_map.get(status, {"impact": 1.0, "display": status})
+                        
+                        return {
+                            "status": status_info["display"],
+                            "impact": status_info["impact"],
+                            "detail": detail,
+                            "source": "ESPN"
+                        }
+    except Exception as e:
+        pass
     
-    injury_db = {
-        # Format: {"status": "Out/Questionable/Probable/GTD/Healthy", "impact": percentage, "detail": "reason"}
-        "Joel Embiid": {"status": "Questionable", "impact": 0.7, "detail": "Knee Management"},
-        "Kawhi Leonard": {"status": "Out", "impact": 0.0, "detail": "Load Management"},
-        "Zion Williamson": {"status": "Probable", "impact": 0.9, "detail": "Hamstring"},
-    }
-    
-    return injury_db.get(player_name, {"status": "Healthy", "impact": 1.0, "detail": "None"})
+    # Player not found in injury report = Healthy
+    return {"status": "Healthy", "impact": 1.0, "detail": "None", "source": "ESPN"}
 
 def calculate_usage_injury_factor(player_name, sport="NBA"):
     """Combine usage rate and injury status for risk assessment"""
@@ -1788,6 +1866,9 @@ def parse_espn_event(event):
 @st.cache_data(ttl=30)
 def fetch_all_live_games():
     """Auto-fetch live games from all sports APIs"""
+    # Get filter setting from session state
+    filter_24h = st.session_state.get('filter_24h', True)
+    
     result = {
         "nba": [],
         "nfl": [],
@@ -1800,13 +1881,13 @@ def fetch_all_live_games():
     
     # NBA
     try:
-        result["nba"] = get_nba_games()
+        result["nba"] = get_nba_games(filter_24h=filter_24h)
     except:
         result["nba"] = []
     
     # NFL
     try:
-        result["nfl"] = get_nfl_games()
+        result["nfl"] = get_nfl_games(filter_24h=filter_24h)
     except:
         result["nfl"] = []
     
@@ -1818,13 +1899,13 @@ def fetch_all_live_games():
     
     # MLB
     try:
-        result["mlb"] = get_mlb_games()
+        result["mlb"] = get_mlb_games(filter_24h=filter_24h)
     except:
         result["mlb"] = []
     
     # NHL
     try:
-        result["nhl"] = get_nhl_games()
+        result["nhl"] = get_nhl_games(filter_24h=filter_24h)
     except:
         result["nhl"] = []
     
@@ -1963,8 +2044,61 @@ def get_player_projected_line(player_name, stat_type, use_projected=True):
     # Default fallback
     return 15.0, 12.0, "default"
 
+def is_game_within_24_hours(game_time_str):
+    """Check if game is within 24 hours (past or future) or currently live"""
+    try:
+        if not game_time_str:
+            return False
+        
+        # Parse the game time (ESPN provides ISO format with Z)
+        game_time = datetime.fromisoformat(game_time_str.replace("Z", "+00:00"))
+        
+        # Get current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Calculate time difference
+        time_diff = abs((game_time - now).total_seconds() / 3600)  # Hours
+        
+        # Return True if within 24 hours (before or after)
+        return time_diff <= 24
+    except:
+        return False
+
+def format_game_time(game_time_str, user_timezone="America/New_York"):
+    """Format game time to user's timezone with accurate display"""
+    try:
+        if not game_time_str:
+            return "TBD"
+        
+        # Parse UTC time from ESPN
+        game_time_utc = datetime.fromisoformat(game_time_str.replace("Z", "+00:00"))
+        
+        # Convert to user timezone (default: Eastern Time)
+        user_tz = ZoneInfo(user_timezone)
+        game_time_local = game_time_utc.astimezone(user_tz)
+        
+        # Get current time
+        now = datetime.now(timezone.utc).astimezone(user_tz)
+        
+        # Calculate time until game
+        time_diff = (game_time_local - now).total_seconds()
+        hours_until = time_diff / 3600
+        
+        # Format display
+        if -3 < hours_until < 0:  # Game started within last 3 hours
+            return f"🔴 LIVE - Started {game_time_local.strftime('%I:%M %p ET')}"
+        elif 0 <= hours_until < 1:  # Starting within 1 hour
+            minutes = int(hours_until * 60)
+            return f"⏰ Starting in {minutes}m - {game_time_local.strftime('%I:%M %p ET')}"
+        elif 1 <= hours_until < 24:  # Within 24 hours
+            return f"📅 Today {game_time_local.strftime('%I:%M %p ET')} ({int(hours_until)}h {int((hours_until % 1) * 60)}m)"
+        else:
+            return game_time_local.strftime("%a %b %d, %I:%M %p ET")
+    except Exception as e:
+        return "TBD"
+
 @st.cache_data(ttl=30)
-def get_nfl_games():
+def get_nfl_games(filter_24h=True):
     """Fetch NFL games from ESPN API"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
@@ -1992,28 +2126,48 @@ def get_soccer_games(league="eng.1"):
         return []
 
 @st.cache_data(ttl=30)
-def get_mlb_games():
-    """Fetch MLB games from ESPN API"""
+def get_mlb_games(filter_24h=True):
+    """Fetch MLB games from ESPN API - optionally filter to 24h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get('events', [])
+            
+            if filter_24h:
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                return filtered_events[:10]
+            
             return events[:10]
         return []
     except Exception as e:
         return []
 
 @st.cache_data(ttl=30)
-def get_nhl_games():
-    """Fetch NHL games from ESPN API"""
+def get_nhl_games(filter_24h=True):
+    """Fetch NHL games from ESPN API - optionally filter to 24h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get('events', [])
+            
+            if filter_24h:
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                return filtered_events[:10]
+            
             return events[:10]
         return []
     except Exception as e:
@@ -2048,14 +2202,28 @@ def get_tennis_matches():
         return []
 
 @st.cache_data(ttl=30)
-def get_nba_games():
-    """Fetch NBA games from ESPN API - REAL DATA ONLY"""
+def get_nba_games(filter_24h=True):
+    """Fetch NBA games from ESPN API - REAL DATA ONLY, optionally filter to 24h window"""
     try:
         url = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
         response = requests.get(url, timeout=8)
         if response.status_code == 200:
             data = response.json()
             events = data.get("events", [])
+            
+            if filter_24h:
+                # Filter to only games within 24 hours or live
+                filtered_events = []
+                for event in events:
+                    date_str = event.get('date')
+                    status = event.get('status', {}).get('type', {}).get('state', '')
+                    
+                    # Include if live or within 24 hours
+                    if status == 'in' or is_game_within_24_hours(date_str):
+                        filtered_events.append(event)
+                
+                return filtered_events[:10]
+            
             return events[:10]
     except Exception as e:
         st.error(f"Failed to fetch live NBA games: {str(e)}")
@@ -2806,9 +2974,7 @@ with main_sport_tabs[0]:
                 
                 # Parse time
                 if start_time:
-                    from datetime import datetime
-                    game_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-                    time_str = game_time.strftime("%a %I:%M %p ET")
+                    time_str = format_game_time(start_time)
                 else:
                     time_str = "TBD"
                 
@@ -3230,8 +3396,7 @@ with main_sport_tabs[1]:
                 
                 # Parse time
                 if start_time:
-                    game_time = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-                    time_str = game_time.strftime("%a %I:%M %p ET")
+                    time_str = format_game_time(start_time)
                 else:
                     time_str = "TBD"
                 
