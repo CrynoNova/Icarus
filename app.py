@@ -2659,15 +2659,19 @@ if st.session_state.parlay_legs:
                 with leg_cols[0]:
                     progress = min(leg['current'] / leg['line'], 1.0) if leg['line'] > 0 else 0
                     
+                    # Get game_time and pace with defaults for backward compatibility
+                    game_time = leg.get('game_time', 'Q2')
+                    pace = leg.get('pace', 'Medium')
+                    
                     # Color-coded display based on progress
                     if progress >= 1.0:
-                        st.markdown(f"📊 :green[**{leg['stat']}**] | {leg['game_time']} | {leg['pace']} Pace")
+                        st.markdown(f"📊 :green[**{leg['stat']}**] | {game_time} | {pace} Pace")
                         st.progress(progress, text=f"🟢 {leg['current']}/{leg['line']} ({progress*100:.0f}%) - HITTING!")
                     elif progress >= 0.8:
-                        st.markdown(f"📊 :orange[**{leg['stat']}**] | {leg['game_time']} | {leg['pace']} Pace")
+                        st.markdown(f"📊 :orange[**{leg['stat']}**] | {game_time} | {pace} Pace")
                         st.progress(progress, text=f"🟡 {leg['current']}/{leg['line']} ({progress*100:.0f}%) - On pace")
                     else:
-                        st.markdown(f"📊 :red[**{leg['stat']}**] | {leg['game_time']} | {leg['pace']} Pace")
+                        st.markdown(f"📊 :red[**{leg['stat']}**] | {game_time} | {pace} Pace")
                         st.progress(progress, text=f"🔴 {leg['current']}/{leg['line']} ({progress*100:.0f}%) - Tracking...")
                     
                     # Projection
