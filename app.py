@@ -34,78 +34,85 @@ if 'parlay_legs' not in st.session_state:
 # MOBILE-FIRST CSS - Enhanced Design
 st.markdown("""
     <style>
-        /* Mobile-First Base Styles with Black Background */
+        /* Mobile-First Base Styles with Dark Gray Background */
         .stApp {
             max-width: 100%;
-            background-color: #000000;
+            background-color: #1e1e1e;
         }
         
         /* Main content area */
         .main {
-            background-color: #000000;
+            background-color: #1e1e1e;
         }
         
-        /* All text white by default */
+        /* All text white for readability */
         .stApp, .main, p, span, div, label {
-            color: #FFFFFF !important;
+            color: #e8e8e8 !important;
         }
         
-        /* Headers with gradient on black */
+        /* Headers with better contrast */
         h1, h2, h3, h4, h5, h6 {
-            color: #FFFFFF !important;
+            color: #ffffff !important;
         }
         
-        /* Sidebar black */
+        /* Sidebar slightly darker */
         [data-testid="stSidebar"] {
-            background-color: #000000;
+            background-color: #181818;
         }
         
-        /* Input fields with dark theme */
+        /* Input fields with better visibility */
         .stTextInput > div > div > input,
         .stNumberInput > div > div > input,
         .stSelectbox > div > div > select {
-            background-color: #1a1a1a !important;
-            color: #FFFFFF !important;
-            border: 1px solid #333333 !important;
+            background-color: #2d2d2d !important;
+            color: #ffffff !important;
+            border: 1px solid #4a4a4a !important;
         }
         
-        /* Buttons maintain gradient but work on black */
+        /* Buttons maintain gradient with better contrast */
         .stButton > button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
+            font-weight: 600;
         }
         
-        /* Expander dark theme */
+        /* Expander with better visibility */
         .streamlit-expanderHeader {
-            background-color: #1a1a1a !important;
-            color: #FFFFFF !important;
+            background-color: #2d2d2d !important;
+            color: #ffffff !important;
         }
         
-        /* Tabs dark theme */
+        /* Tabs with improved contrast */
         .stTabs [data-baseweb="tab-list"] {
-            background-color: #1a1a1a;
+            background-color: #2d2d2d;
         }
         
         .stTabs [data-baseweb="tab"] {
-            color: #FFFFFF !important;
-            background-color: #1a1a1a;
+            color: #e8e8e8 !important;
+            background-color: #2d2d2d;
         }
         
-        /* Info/warning boxes dark theme */
+        /* Info/warning boxes with better contrast */
         .stAlert {
-            background-color: #1a1a1a !important;
-            color: #FFFFFF !important;
+            background-color: #2d2d2d !important;
+            color: #ffffff !important;
+            border: 1px solid #4a4a4a !important;
         }
         
-        /* Metrics dark theme */
+        /* Metrics with high contrast */
         [data-testid="stMetricValue"] {
-            color: #FFFFFF !important;
+            color: #ffffff !important;
         }
         
-        /* Divider visible on black */
+        /* Divider more visible */
         hr {
-            border-color: #333333 !important;
+            border-color: #4a4a4a !important;
+        }
+        
+        /* Container borders */
+        [data-testid="stContainer"] {
+            border-color: #4a4a4a !important;
         }
         
         /* Metrics and Cards */
@@ -2103,32 +2110,148 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
         with col8:
             pace = st.selectbox("⚡ Game Pace", ["Low", "Medium", "High"], index=1, key="parlay_pace")
         
-        # Calculate individual leg probability and risk
+        # ENHANCED: Calculate individual leg probability and risk with detailed analytics
         try:
             leg_probability = 50.0  # Base probability
+            confidence_score = 0  # Track multiple factors
             
-            # Adjust based on current vs line
+            # Factor 1: Performance vs Line (40% weight)
             if betting_line > 0:
                 performance_ratio = float(current_value) / float(betting_line)
-                if performance_ratio >= 1.2:
-                    leg_probability = 75.0  # Way ahead
+                if performance_ratio >= 1.3:
+                    leg_probability = 78.0  # Way ahead - very strong
+                    confidence_score += 40
+                elif performance_ratio >= 1.15:
+                    leg_probability = 68.0  # Ahead of pace
+                    confidence_score += 32
                 elif performance_ratio >= 1.0:
-                    leg_probability = 65.0  # On track
-                elif performance_ratio >= 0.8:
-                    leg_probability = 50.0  # Close
+                    leg_probability = 62.0  # Hit target
+                    confidence_score += 25
+                elif performance_ratio >= 0.85:
+                    leg_probability = 52.0  # Close, needs push
+                    confidence_score += 15
+                elif performance_ratio >= 0.7:
+                    leg_probability = 42.0  # Behind
+                    confidence_score += 8
                 else:
-                    leg_probability = 35.0  # Behind
+                    leg_probability = 28.0  # Far behind
+                    confidence_score += 2
             
-            # Risk calculation
-            risk_level = "Low" if leg_probability > 60 else "Medium" if leg_probability > 45 else "High"
-            risk_color = "🟢" if risk_level == "Low" else "🟡" if risk_level == "Medium" else "🔴"
+            # Factor 2: Historical Data (30% weight)
+            if st.session_state.selected_player_parlay in BETTING_LINES:
+                player_data = BETTING_LINES[st.session_state.selected_player_parlay]
+                if base_stat in player_data:
+                    season_avg = player_data[base_stat]
+                    if season_avg > betting_line * 1.1:
+                        leg_probability += 8  # Player typically exceeds line
+                        confidence_score += 25
+                    elif season_avg > betting_line * 0.95:
+                        leg_probability += 4  # Player usually close
+                        confidence_score += 20
+                    else:
+                        leg_probability -= 5  # Line is high for player
+                        confidence_score += 10
             
-            # Display risk indicator
-            st.markdown(f"### {risk_color} Risk Level: {risk_level} • Win Probability: {leg_probability:.0f}%")
+            # Factor 3: Game Context (20% weight)
+            if game_time in ['Q3', 'Q4', '2H']:
+                leg_probability += 5  # More time elapsed, more certainty
+                confidence_score += 15
+            if pace == 'High':
+                leg_probability += 3  # High pace = more opportunities
+                confidence_score += 10
+            elif pace == 'Low':
+                leg_probability -= 2  # Low pace = fewer opportunities
+                confidence_score += 5
             
-        except:
+            # Factor 4: Odds vs Line Analysis (10% weight)
+            if odds_input < -150:  # Heavy favorite
+                leg_probability += 2
+                confidence_score += 8
+            elif odds_input > 150:  # Heavy underdog
+                leg_probability -= 3
+                confidence_score += 3
+            
+            # Normalize probability
+            leg_probability = max(15.0, min(85.0, leg_probability))
+            
+            # Calculate comprehensive risk level
+            if leg_probability > 65 and confidence_score > 70:
+                risk_level = "Very Low"
+                risk_color = "🟢🟢"
+            elif leg_probability > 58 and confidence_score > 55:
+                risk_level = "Low"
+                risk_color = "🟢"
+            elif leg_probability > 48 and confidence_score > 40:
+                risk_level = "Medium"
+                risk_color = "🟡"
+            elif leg_probability > 35:
+                risk_level = "High"
+                risk_color = "🔴"
+            else:
+                risk_level = "Very High"
+                risk_color = "🔴🔴"
+            
+            # Calculate Expected Value (EV)
+            if odds_input > 0:
+                decimal_odds = (odds_input / 100) + 1
+            else:
+                decimal_odds = (100 / abs(odds_input)) + 1
+            
+            expected_value = (leg_probability / 100 * decimal_odds) - 1
+            ev_percent = expected_value * 100
+            
+            # Display comprehensive risk analysis
+            st.markdown(f"### {risk_color} Risk Level: {risk_level}")
+            
+            risk_cols = st.columns(4)
+            with risk_cols[0]:
+                st.metric("Win Probability", f"{leg_probability:.1f}%", 
+                         help="AI-calculated based on performance, history, context, odds")
+            with risk_cols[1]:
+                st.metric("Confidence Score", f"{confidence_score}/100",
+                         help="Data quality & reliability score")
+            with risk_cols[2]:
+                ev_color = "🟢" if ev_percent > 5 else "🟡" if ev_percent > -5 else "🔴"
+                st.metric("Expected Value", f"{ev_color} {ev_percent:+.1f}%",
+                         help="Edge over sportsbook odds")
+            with risk_cols[3]:
+                kelly_size = max(0, (leg_probability/100 * decimal_odds - 1) / (decimal_odds - 1)) * 100
+                st.metric("Kelly Bet %", f"{kelly_size:.1f}%",
+                         help="Optimal bankroll percentage (Kelly Criterion)")
+            
+            # Detailed breakdown expander
+            with st.expander("📊 Detailed Risk Breakdown"):
+                st.markdown(f"""
+                **Performance Analysis:**
+                - Current: {current_value:.1f} / Line: {betting_line:.1f} = {performance_ratio:.1%}
+                - Status: {"✅ Ahead" if performance_ratio >= 1.0 else "⏳ Tracking"}
+                
+                **Historical Context:**
+                - Season Average: {season_avg:.1f if 'season_avg' in locals() else 'N/A'}
+                - vs Line: {((season_avg/betting_line - 1)*100):+.1f}% if 'season_avg' in locals() else 'N/A'
+                
+                **Game Factors:**
+                - Time: {game_time} (more time = less variance)
+                - Pace: {pace} (affects opportunity volume)
+                - Odds: {odds_input:+d} (market pricing)
+                
+                **Risk Metrics:**
+                - Win Probability: {leg_probability:.1f}%
+                - Confidence: {confidence_score}/100
+                - Expected Value: {ev_percent:+.1f}%
+                - Kelly Criterion: {kelly_size:.1f}% of bankroll
+                
+                **Recommendation:**
+                {"✅ Strong bet - positive EV with high confidence" if ev_percent > 5 and confidence_score > 60 else
+                 "🟡 Fair bet - small edge or moderate confidence" if ev_percent > -5 and confidence_score > 40 else
+                 "🔴 Avoid - negative EV or low confidence"}
+                """)
+            
+        except Exception as e:
             leg_probability = 50.0
             risk_color = "🟡"
+            confidence_score = 50
+            st.error(f"Risk calculation error: {str(e)}")
         
         if st.button(f"{risk_color} Add to Parlay", type="primary", use_container_width=True):
             try:
