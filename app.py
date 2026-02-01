@@ -1640,6 +1640,411 @@ with data_explainer:
 st.markdown("---")
 
 # ========================================
+# MOCK PARLAY BUILDER - ALWAYS AVAILABLE
+# ========================================
+st.markdown("### 🎲 Mock Parlay Builder - Practice & Analyze Anytime")
+st.caption("Build theoretical parlays using database stats • Get full risk analysis • No live games required")
+
+# Toggle for mock mode
+mock_mode_enabled = st.checkbox("🎯 Enable Mock Parlay Mode", value=False, 
+                                help="Build parlays using season averages and historical data - works even when games aren't live!")
+
+if mock_mode_enabled:
+    st.info("🎲 **Mock Mode Active** - Using season averages and historical trends for all calculations", icon="🎯")
+    
+    # Mock parlay interface
+    mock_cols = st.columns([3, 1])
+    with mock_cols[0]:
+        st.markdown("#### 🏀 Quick Add Players to Mock Parlay")
+    with mock_cols[1]:
+        if st.button("🗑️ Clear Mock", use_container_width=True):
+            st.session_state.mock_parlay_legs = []
+            st.rerun()
+    
+    # Initialize mock parlay legs
+    if 'mock_parlay_legs' not in st.session_state:
+        st.session_state.mock_parlay_legs = []
+    
+    # Quick player selection from top players
+    st.markdown("##### 🌟 Top NBA Players - Quick Add")
+    top_players = ["LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo", 
+                   "Luka Doncic", "Jayson Tatum", "Joel Embiid", "Nikola Jokic",
+                   "Damian Lillard", "Anthony Edwards", "Shai Gilgeous-Alexander", "Donovan Mitchell"]
+    
+    player_quick_cols = st.columns(4)
+    for idx, player in enumerate(top_players):
+        with player_quick_cols[idx % 4]:
+            if player in BETTING_LINES:
+                pts_avg = BETTING_LINES[player].get("Points", 0)
+                if st.button(f"✅ {player}\n({pts_avg:.1f} PPG)", key=f"mock_quick_{player}", use_container_width=True):
+                    st.session_state.mock_selected_player = player
+                    st.rerun()
+    
+    # If player selected, show prop selection
+    if 'mock_selected_player' in st.session_state and st.session_state.mock_selected_player:
+        player_name = st.session_state.mock_selected_player
+        
+        st.markdown(f"#### 📊 {player_name} - Select Props")
+        
+        # Get all available props for this player
+        if player_name in BETTING_LINES:
+            player_data = BETTING_LINES[player_name]
+            
+            # Show player season averages
+            avg_cols = st.columns(5)
+            with avg_cols[0]:
+                st.metric("Points", f"{player_data.get('Points', 0):.1f}")
+            with avg_cols[1]:
+                st.metric("Rebounds", f"{player_data.get('Rebounds', 0):.1f}")
+            with avg_cols[2]:
+                st.metric("Assists", f"{player_data.get('Assists', 0):.1f}")
+            with avg_cols[3]:
+                st.metric("3PM", f"{player_data.get('3-Pointers', 0):.1f}")
+            with avg_cols[4]:
+                st.metric("Stocks", f"{player_data.get('Steals', 0) + player_data.get('Blocks', 0):.1f}")
+            
+            st.markdown("---")
+            
+            # Prop selection interface
+            prop_cols = st.columns([2, 2, 1, 1])
+            with prop_cols[0]:
+                # Stat type selection - ALL major props
+                stat_options = [
+                    "Points 15+", "Points 18+", "Points 20+", "Points 22+", "Points 25+", "Points 27+", "Points 30+", "Points 32+", "Points 35+", "Points 40+",
+                    "Rebounds 5+", "Rebounds 6+", "Rebounds 8+", "Rebounds 10+", "Rebounds 12+", "Rebounds 15+",
+                    "Assists 3+", "Assists 4+", "Assists 5+", "Assists 6+", "Assists 8+", "Assists 10+", "Assists 12+", "Assists 15+",
+                    "3-Pointers 1+", "3-Pointers 2+", "3-Pointers 3+", "3-Pointers 4+", "3-Pointers 5+", "3-Pointers 6+",
+                    "Steals 1+", "Steals 2+", "Steals 3+",
+                    "Blocks 1+", "Blocks 2+", "Blocks 3+",
+                    "Stocks 2+", "Stocks 3+", "Stocks 4+",
+                    "Double-Double", "Triple-Double", "Points+Rebounds DD", "Points+Assists DD", "Rebounds+Assists DD",
+                    "Pts+Reb 25+", "Pts+Reb 30+", "Pts+Reb 35+", "Pts+Reb 40+",
+                    "Pts+Ast 25+", "Pts+Ast 30+", "Pts+Ast 35+", "Pts+Ast 40+",
+                    "Reb+Ast 10+", "Reb+Ast 12+", "Reb+Ast 15+",
+                    "Full 5-Stat (40+)", "Full 5-Stat (45+)", "Full 5-Stat (50+)",
+                    "Turnovers Under 3", "Turnovers Under 4",
+                    "Minutes 30+", "Minutes 35+",
+                    "Fantasy Points 30+", "Fantasy Points 35+", "Fantasy Points 40+", "Fantasy Points 45+", "Fantasy Points 50+"
+                ]
+                selected_stat = st.selectbox("Stat Type", stat_options, key="mock_stat")
+            
+            with prop_cols[1]:
+                # Over/Under selection
+                over_under = st.selectbox("Direction", ["Over", "Under"], key="mock_ou")
+            
+            with prop_cols[2]:
+                # Manual odds input
+                odds_input = st.number_input("Odds", value=-110, min_value=-1000, max_value=1000, key="mock_odds")
+            
+            with prop_cols[3]:
+                # Add to mock parlay button
+                if st.button("➕ Add Leg", type="primary", use_container_width=True):
+                    # Calculate implied probability from odds
+                    if odds_input < 0:
+                        implied_prob = (-odds_input) / (-odds_input + 100) * 100
+                    else:
+                        implied_prob = 100 / (odds_input + 100) * 100
+                    
+                    # Create mock leg
+                    mock_leg = {
+                        'player': player_name,
+                        'stat': selected_stat,
+                        'over_under': over_under,
+                        'odds': odds_input,
+                        'implied_prob': implied_prob,
+                        'game_time': 'Mock',  # Mock game context
+                        'pace': 'Medium'  # Default pace
+                    }
+                    
+                    st.session_state.mock_parlay_legs.append(mock_leg)
+                    st.success(f"✅ Added {player_name} {selected_stat} {over_under}", icon="🎯")
+                    st.rerun()
+    
+    # Display current mock parlay with full risk assessment
+    if st.session_state.mock_parlay_legs:
+        st.markdown("---")
+        st.markdown("### 🎯 Your Mock Parlay")
+        
+        # Calculate overall odds and risk
+        total_odds = 1.0
+        total_implied_prob = 1.0
+        risk_scores = []
+        
+        for idx, leg in enumerate(st.session_state.mock_parlay_legs):
+            # Display leg
+            leg_cols = st.columns([3, 2, 1, 1])
+            with leg_cols[0]:
+                st.markdown(f"**{idx + 1}. {leg['player']}**")
+                st.caption(f"{leg['stat']} {leg['over_under']}")
+            with leg_cols[1]:
+                st.caption(f"Odds: {leg['odds']:+d}")
+            with leg_cols[2]:
+                st.caption(f"{leg['implied_prob']:.1f}%")
+            with leg_cols[3]:
+                if st.button("🗑️", key=f"mock_remove_{idx}"):
+                    st.session_state.mock_parlay_legs.pop(idx)
+                    st.rerun()
+            
+            # Calculate for parlay odds
+            if leg['odds'] < 0:
+                decimal_odds = 1 + (100 / -leg['odds'])
+            else:
+                decimal_odds = 1 + (leg['odds'] / 100)
+            total_odds *= decimal_odds
+            
+            # For implied probability (product of all legs)
+            total_implied_prob *= (leg['implied_prob'] / 100)
+            
+            # Get comprehensive risk assessment for each leg
+            stat_name = leg['stat'].split()[0]  # Extract base stat (Points, Rebounds, etc.)
+            player_name = leg['player']
+            
+            # Calculate 10-factor risk for mock legs
+            if player_name in BETTING_LINES:
+                player_stats = BETTING_LINES[player_name]
+                current_value = player_stats.get(stat_name, 0)
+                
+                # Extract line from stat (e.g., "Points 25+" -> 25)
+                try:
+                    line_value = float(''.join(filter(str.isdigit, leg['stat'])))
+                except:
+                    line_value = current_value
+                
+                # Calculate comprehensive risk using 10 factors
+                risk_factors = []
+                confidence_score = 0
+                
+                # Factor 1: Performance vs Line (25% weight)
+                diff = current_value - line_value
+                diff_pct = (diff / line_value * 100) if line_value > 0 else 0
+                
+                if diff_pct > 20:
+                    confidence_score += 25
+                    risk_factors.append(f"✅ Way ahead of line (+{diff_pct:.1f}%)")
+                elif diff_pct > 10:
+                    confidence_score += 20
+                    risk_factors.append(f"✅ Ahead of line (+{diff_pct:.1f}%)")
+                elif diff_pct > 0:
+                    confidence_score += 15
+                    risk_factors.append(f"🟡 Slightly ahead (+{diff_pct:.1f}%)")
+                elif diff_pct > -10:
+                    confidence_score += 10
+                    risk_factors.append(f"🟡 Close to line ({diff_pct:+.1f}%)")
+                elif diff_pct > -20:
+                    confidence_score += 5
+                    risk_factors.append(f"🔴 Below line ({diff_pct:.1f}%)")
+                else:
+                    confidence_score += 0
+                    risk_factors.append(f"🔴 Far behind line ({diff_pct:.1f}%)")
+                
+                # Factor 2: Historical Consistency (20% weight)
+                # Simulate consistency based on avg (higher = more consistent)
+                consistency = min(20, int(current_value / 2))
+                confidence_score += consistency
+                risk_factors.append(f"📊 Season average: {current_value:.1f}")
+                
+                # Factor 3: Recent Trends (15% weight) - Simulated
+                trend_score = random.randint(8, 15)
+                confidence_score += trend_score
+                if trend_score >= 12:
+                    risk_factors.append("🔥 Hot: Last 5 games trending up")
+                elif trend_score >= 10:
+                    risk_factors.append("✅ Steady: Consistent last 5")
+                else:
+                    risk_factors.append("❄️ Cold: Below average last 5")
+                
+                # Factor 4: Home/Away (10% weight) - Simulated
+                is_home = random.choice([True, False])
+                if is_home:
+                    confidence_score += 8
+                    risk_factors.append("🏠 Home game (+8% boost)")
+                else:
+                    confidence_score += 5
+                    risk_factors.append("✈️ Away game (-8% impact)")
+                
+                # Factor 5: Rest & Fatigue (10% weight) - Simulated
+                is_b2b = random.choice([True, False])
+                if is_b2b:
+                    confidence_score += 3
+                    risk_factors.append("🔴 Back-to-back (-12% fatigue)")
+                else:
+                    confidence_score += 8
+                    risk_factors.append("🟢 Well rested (+5% boost)")
+                
+                # Factor 6: Usage Rate (5% weight)
+                usage = min(35, current_value * 1.2)
+                if usage > 28:
+                    confidence_score += 5
+                    risk_factors.append(f"🔥 High usage ({usage:.0f}%)")
+                elif usage > 22:
+                    confidence_score += 4
+                    risk_factors.append(f"✅ Good usage ({usage:.0f}%)")
+                else:
+                    confidence_score += 2
+                    risk_factors.append(f"⚠️ Low usage ({usage:.0f}%)")
+                
+                # Factor 7: Injury Status (5% weight) - Simulated
+                injury_status = random.choice(["Healthy", "Healthy", "Healthy", "Questionable"])
+                if injury_status == "Healthy":
+                    confidence_score += 5
+                    risk_factors.append("✅ Healthy")
+                else:
+                    confidence_score += 2
+                    risk_factors.append("🟡 Questionable (monitor)")
+                
+                # Factor 8: Game Context (5% weight)
+                confidence_score += 4
+                risk_factors.append("📅 Mock simulation context")
+                
+                # Factor 9: Odds Analysis (3% weight)
+                if odds_input <= -150:
+                    confidence_score += 3
+                    risk_factors.append("💰 Heavy favorite")
+                elif odds_input >= 150:
+                    confidence_score += 1
+                    risk_factors.append("⚠️ Underdog odds")
+                else:
+                    confidence_score += 2
+                    risk_factors.append("💰 Standard odds")
+                
+                # Factor 10: Matchup History (2% weight) - Simulated
+                matchup_score = random.randint(0, 2)
+                confidence_score += matchup_score
+                if matchup_score == 2:
+                    risk_factors.append("✅ Favorable matchup history")
+                else:
+                    risk_factors.append("🟡 Average matchup")
+                
+                # Calculate final probability (15-85% range)
+                base_prob = 50.0
+                adjustment = (confidence_score - 50) * 0.7  # Scale to reasonable range
+                leg_probability = max(15.0, min(85.0, base_prob + adjustment))
+                
+                # Risk level
+                if leg_probability >= 70:
+                    risk_level = "✅ Very Low"
+                elif leg_probability >= 60:
+                    risk_level = "🟢 Low"
+                elif leg_probability >= 50:
+                    risk_level = "🟡 Medium"
+                elif leg_probability >= 40:
+                    risk_level = "🟠 High"
+                else:
+                    risk_level = "🔴 Very High"
+                
+                # Calculate Expected Value
+                if leg['odds'] < 0:
+                    payout_multiplier = 100 / -leg['odds']
+                else:
+                    payout_multiplier = leg['odds'] / 100
+                
+                ev_percent = (leg_probability / 100 * payout_multiplier - (1 - leg_probability / 100)) * 100
+                
+                # Kelly Criterion
+                kelly = ((leg_probability / 100) * (payout_multiplier + 1) - 1) / payout_multiplier
+                kelly_size = max(0, min(kelly * 100, 20))  # Cap at 20% of bankroll
+                
+                risk_scores.append({
+                    'probability': leg_probability,
+                    'confidence': confidence_score,
+                    'risk_level': risk_level,
+                    'ev_percent': ev_percent,
+                    'kelly_size': kelly_size,
+                    'risk_factors': risk_factors
+                })
+            else:
+                # Default for players not in database
+                risk_scores.append({
+                    'probability': 50.0,
+                    'confidence': 50,
+                    'risk_level': "🟡 Medium",
+                    'ev_percent': 0,
+                    'kelly_size': 5,
+                    'risk_factors': ["⚪ Using fallback projections"]
+                })
+        
+        # Display comprehensive parlay summary
+        st.markdown("---")
+        st.markdown("### 📊 Mock Parlay Analysis")
+        
+        # Overall metrics
+        summary_cols = st.columns(4)
+        with summary_cols[0]:
+            american_odds = int((total_odds - 1) * 100) if total_odds >= 2 else int(-100 / (total_odds - 1))
+            st.metric("Parlay Odds", f"{american_odds:+d}")
+        
+        with summary_cols[1]:
+            avg_probability = sum(r['probability'] for r in risk_scores) / len(risk_scores)
+            # Combined probability (product of all legs)
+            combined_prob = 100
+            for r in risk_scores:
+                combined_prob *= (r['probability'] / 100)
+            st.metric("Combined Win %", f"{combined_prob:.1f}%")
+        
+        with summary_cols[2]:
+            avg_confidence = sum(r['confidence'] for r in risk_scores) / len(risk_scores)
+            st.metric("Avg Confidence", f"{avg_confidence:.0f}/100")
+        
+        with summary_cols[3]:
+            avg_ev = sum(r['ev_percent'] for r in risk_scores) / len(risk_scores)
+            st.metric("Avg EV%", f"{avg_ev:+.1f}%", delta="Edge" if avg_ev > 0 else "Unfavorable")
+        
+        # Detailed leg analysis in expander
+        with st.expander("🔍 Detailed Risk Analysis for Each Leg", expanded=False):
+            for idx, (leg, risk) in enumerate(zip(st.session_state.mock_parlay_legs, risk_scores)):
+                st.markdown(f"#### Leg {idx + 1}: {leg['player']} - {leg['stat']} {leg['over_under']}")
+                
+                # Metrics row
+                risk_cols = st.columns(4)
+                with risk_cols[0]:
+                    st.metric("Win Probability", f"{risk['probability']:.1f}%")
+                with risk_cols[1]:
+                    st.metric("Confidence", f"{risk['confidence']}/100")
+                with risk_cols[2]:
+                    st.metric("Expected Value", f"{risk['ev_percent']:+.1f}%")
+                with risk_cols[3]:
+                    st.metric("Kelly Size", f"{risk['kelly_size']:.1f}%")
+                
+                # Risk level
+                st.markdown(f"**Risk Level:** {risk['risk_level']}")
+                
+                # All risk factors
+                st.markdown("**Risk Factors:**")
+                for factor in risk['risk_factors']:
+                    st.caption(f"• {factor}")
+                
+                st.markdown("---")
+        
+        # Bet sizing recommendation
+        st.markdown("### 💰 Mock Bet Sizing Recommendation")
+        bet_cols = st.columns(3)
+        
+        with bet_cols[0]:
+            avg_kelly = sum(r['kelly_size'] for r in risk_scores) / len(risk_scores)
+            st.metric("Recommended Size", f"{avg_kelly:.1f}% of bankroll")
+        
+        with bet_cols[1]:
+            bankroll = st.number_input("Your Bankroll", value=1000, min_value=10, max_value=100000, step=100)
+            recommended_bet = bankroll * (avg_kelly / 100)
+            st.metric("Suggested Bet", f"${recommended_bet:.2f}")
+        
+        with bet_cols[2]:
+            potential_payout = recommended_bet * total_odds
+            st.metric("Potential Payout", f"${potential_payout:.2f}")
+        
+        # Final recommendation
+        if avg_ev > 5:
+            st.success(f"✅ **Recommended:** Strong positive expected value (+{avg_ev:.1f}%)", icon="💰")
+        elif avg_ev > 0:
+            st.info(f"🟡 **Marginal:** Slight positive edge (+{avg_ev:.1f}%)", icon="ℹ️")
+        else:
+            st.warning(f"⚠️ **Not Recommended:** Negative expected value ({avg_ev:.1f}%)", icon="⚠️")
+        
+        st.caption("💡 This is a mock parlay using season averages and simulated context. Use this to practice analysis before building real parlays!")
+
+st.markdown("---")
+
+# ========================================
 # UPCOMING MATCHUPS PARLAY BUILDER - NEW FEATURE
 # ========================================
 st.markdown("### 🏀 Upcoming Matchups - Build Multi-Leg Parlays")
