@@ -329,8 +329,14 @@ with st.sidebar:
         
         # Display each leg in sidebar
         for idx, leg in enumerate(st.session_state.parlay_legs):
+            player_name = leg.get('player', '')
+            sport = leg.get('sport', 'NBA')
+            
+            # Get usage/injury data
+            ui_data = calculate_usage_injury_factor(player_name, sport) if player_name else None
+            
             # Calculate progress
-            progress = min(leg['current'] / leg['line'], 1.0) if leg['line'] > 0 else 0
+            progress = min(leg['current'] / leg['line'], 1.0) if leg.get('line', 0) > 0 else 0
             
             # Determine status color
             if progress >= 1.0:
@@ -346,16 +352,29 @@ with st.sidebar:
                 status_icon = "⚠️"
                 status_text = "BEHIND"
             
+            # Usage/Injury risk indicator
+            if ui_data:
+                risk_emoji = {"LOW RISK": "🟢", "MEDIUM RISK": "🟡", "HIGH RISK": "🟠", "AVOID": "🔴"}.get(ui_data['risk_level'], "⚪")
+                injury_status = ui_data['injury_status']
+                usage_rate = ui_data['usage_rate']
+            else:
+                risk_emoji = "⚪"
+                injury_status = "Unknown"
+                usage_rate = 0
+            
             st.markdown(f"""
             <div class='sidebar-leg-card'>
                 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;'>
-                    <strong style='color: white;'>Leg {idx + 1}</strong>
+                    <strong style='color: white;'>Leg {idx + 1} {risk_emoji}</strong>
                     <span style='color: {status_color}; font-weight: bold;'>{status_icon} {status_text}</span>
                 </div>
                 <div style='color: #e8e8e8; font-size: 0.9rem;'>
-                    <strong>{leg['player']}</strong><br>
-                    {leg['stat']}: {leg['current']:.1f}/{leg['line']:.1f}<br>
-                    Odds: {leg['odds']:+d} • {progress*100:.0f}% Progress
+                    <strong>{player_name}</strong><br>
+                    {leg.get('stat', 'N/A')}<br>
+                    Odds: {leg.get('odds', 0):+d} • {leg.get('over_under', 'Over')}<br>
+                    <span style='font-size: 0.75rem; color: #aaa;'>
+                        Usage: {usage_rate:.1f}% • {injury_status}
+                    </span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -363,6 +382,9 @@ with st.sidebar:
             # Remove button
             if st.button("🗑️ Remove", key=f"sidebar_remove_{idx}", use_container_width=True):
                 st.session_state.parlay_legs.pop(idx)
+                # Also remove from mock_parlay_legs if exists
+                if idx < len(st.session_state.mock_parlay_legs):
+                    st.session_state.mock_parlay_legs.pop(idx)
                 st.rerun()
         
         st.markdown("---")
@@ -374,6 +396,7 @@ with st.sidebar:
         
         if st.button("🗑️ Clear All Legs", key="sidebar_clear", use_container_width=True, type="secondary"):
             st.session_state.parlay_legs = []
+            st.session_state.mock_parlay_legs = []
             st.rerun()
         
         # AI Recommendation
@@ -413,6 +436,140 @@ with st.sidebar:
 def round_to_betting_line(value):
     """Round to nearest 0.5 for betting lines"""
     return round(value * 2) / 2
+
+# ========================================
+# USAGE RATE & INJURY TRACKING
+# ========================================
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_player_usage_rate(player_name, sport="NBA"):
+    """Get player usage rate and minutes - higher usage = more likely to hit props"""
+    # NBA Usage Rates (% of team possessions used when on floor + typical minutes)
+    nba_usage = {
+        # High Usage Stars (30%+ usage, 35+ MPG)
+        "Luka Doncic": {"usage": 36.2, "minutes": 37.5, "role": "Primary", "touches": 95},
+        "Giannis Antetokounmpo": {"usage": 35.8, "minutes": 35.2, "role": "Primary", "touches": 88},
+        "Joel Embiid": {"usage": 33.5, "minutes": 34.6, "role": "Primary", "touches": 85},
+        "Shai Gilgeous-Alexander": {"usage": 32.8, "minutes": 35.8, "role": "Primary", "touches": 92},
+        "Stephen Curry": {"usage": 32.5, "minutes": 34.7, "role": "Primary", "touches": 90},
+        "LeBron James": {"usage": 31.2, "minutes": 35.3, "role": "Primary", "touches": 85},
+        "Kevin Durant": {"usage": 30.8, "minutes": 35.5, "role": "Primary", "touches": 82},
+        "Damian Lillard": {"usage": 30.5, "minutes": 35.1, "role": "Primary", "touches": 88},
+        "Anthony Davis": {"usage": 30.2, "minutes": 34.8, "role": "Primary", "touches": 75},
+        "Ja Morant": {"usage": 30.0, "minutes": 33.5, "role": "Primary", "touches": 90},
+        
+        # Medium-High Usage (25-30%, 30-35 MPG)
+        "Jayson Tatum": {"usage": 29.5, "minutes": 36.2, "role": "Primary", "touches": 85},
+        "Donovan Mitchell": {"usage": 28.8, "minutes": 35.8, "role": "Primary", "touches": 82},
+        "Devin Booker": {"usage": 28.2, "minutes": 35.5, "role": "Primary", "touches": 80},
+        "Trae Young": {"usage": 31.5, "minutes": 35.0, "role": "Primary", "touches": 95},
+        "Jaylen Brown": {"usage": 27.5, "minutes": 35.0, "role": "Secondary", "touches": 70},
+        "Anthony Edwards": {"usage": 28.9, "minutes": 35.5, "role": "Primary", "touches": 85},
+        "Tyrese Haliburton": {"usage": 26.8, "minutes": 34.2, "role": "Primary", "touches": 82},
+        
+        # Medium Usage (20-25%, 28-32 MPG)
+        "Bam Adebayo": {"usage": 24.5, "minutes": 33.8, "role": "Secondary", "touches": 65},
+        "Domantas Sabonis": {"usage": 25.2, "minutes": 35.5, "role": "Secondary", "touches": 72},
+        "Julius Randle": {"usage": 26.5, "minutes": 34.3, "role": "Primary", "touches": 75},
+    }
+    
+    # NFL Usage Rates (snap % + target/carry share)
+    nfl_usage = {
+        # QBs (100% snap count when healthy)
+        "Patrick Mahomes": {"usage": 100, "snaps": 65, "role": "Starter", "touches": 40},
+        "Josh Allen": {"usage": 100, "snaps": 65, "role": "Starter", "touches": 42},
+        "Joe Burrow": {"usage": 100, "snaps": 65, "role": "Starter", "touches": 38},
+        "Lamar Jackson": {"usage": 100, "snaps": 65, "role": "Starter", "touches": 45},
+        "Jalen Hurts": {"usage": 100, "snaps": 65, "role": "Starter", "touches": 43},
+        
+        # RBs (60-80% snaps for starters)
+        "Christian McCaffrey": {"usage": 78, "snaps": 55, "role": "Bellcow", "touches": 25},
+        "Saquon Barkley": {"usage": 72, "snaps": 50, "role": "Bellcow", "touches": 23},
+        "Derrick Henry": {"usage": 75, "snaps": 52, "role": "Bellcow", "touches": 24},
+        
+        # WRs (75-90% snaps for WR1s)
+        "Tyreek Hill": {"usage": 88, "snaps": 60, "role": "WR1", "touches": 12},
+        "CeeDee Lamb": {"usage": 90, "snaps": 62, "role": "WR1", "touches": 11},
+        "Justin Jefferson": {"usage": 87, "snaps": 60, "role": "WR1", "touches": 10},
+        "Ja'Marr Chase": {"usage": 85, "snaps": 58, "role": "WR1", "touches": 10},
+    }
+    
+    if sport == "NBA":
+        return nba_usage.get(player_name, {"usage": 22.0, "minutes": 28.0, "role": "Rotation", "touches": 50})
+    elif sport == "NFL":
+        return nfl_usage.get(player_name, {"usage": 60.0, "snaps": 45, "role": "Rotation", "touches": 8})
+    else:
+        return {"usage": 50.0, "minutes": 30.0, "role": "Starter", "touches": 40}
+
+@st.cache_data(ttl=180)  # Cache for 3 minutes
+def get_injury_status(player_name, sport="NBA"):
+    """Check injury status - returns dict with status and impact"""
+    # Real-time injury tracking (would integrate with ESPN Injury API in production)
+    # For now, using known injury situations from 2025-26 season
+    
+    injury_db = {
+        # Format: {"status": "Out/Questionable/Probable/GTD/Healthy", "impact": percentage, "detail": "reason"}
+        "Joel Embiid": {"status": "Questionable", "impact": 0.7, "detail": "Knee Management"},
+        "Kawhi Leonard": {"status": "Out", "impact": 0.0, "detail": "Load Management"},
+        "Zion Williamson": {"status": "Probable", "impact": 0.9, "detail": "Hamstring"},
+    }
+    
+    return injury_db.get(player_name, {"status": "Healthy", "impact": 1.0, "detail": "None"})
+
+def calculate_usage_injury_factor(player_name, sport="NBA"):
+    """Combine usage rate and injury status for risk assessment"""
+    usage_data = get_player_usage_rate(player_name, sport)
+    injury_data = get_injury_status(player_name, sport)
+    
+    # Usage factor (higher usage = higher confidence)
+    usage_rate = usage_data.get("usage", 50.0)
+    if sport == "NBA":
+        # NBA: 30%+ usage is elite, 20-25% is medium
+        if usage_rate >= 30:
+            usage_factor = 1.15  # 15% boost for elite usage
+        elif usage_rate >= 25:
+            usage_factor = 1.08  # 8% boost for high usage
+        elif usage_rate >= 20:
+            usage_factor = 1.0   # Neutral
+        else:
+            usage_factor = 0.90  # 10% penalty for low usage
+    else:  # NFL
+        # NFL: 70%+ snaps is elite for position
+        if usage_rate >= 80:
+            usage_factor = 1.12
+        elif usage_rate >= 65:
+            usage_factor = 1.05
+        else:
+            usage_factor = 0.92
+    
+    # Injury factor
+    injury_impact = injury_data.get("impact", 1.0)
+    injury_factor = injury_impact
+    
+    # Combined factor
+    total_factor = usage_factor * injury_factor
+    
+    # Risk categorization
+    if injury_data["status"] == "Out":
+        risk_level = "AVOID"
+    elif injury_data["status"] == "Questionable" and injury_impact < 0.8:
+        risk_level = "HIGH RISK"
+    elif usage_rate < 20 and sport == "NBA":
+        risk_level = "MEDIUM RISK"
+    elif total_factor >= 1.1:
+        risk_level = "LOW RISK"
+    else:
+        risk_level = "MEDIUM RISK"
+    
+    return {
+        "total_factor": total_factor,
+        "usage_factor": usage_factor,
+        "injury_factor": injury_factor,
+        "usage_rate": usage_rate,
+        "injury_status": injury_data["status"],
+        "injury_detail": injury_data["detail"],
+        "risk_level": risk_level,
+        "role": usage_data.get("role", "Unknown")
+    }
 
 def calculate_parlay_probability(legs):
     """Enhanced AI-powered model with real-time data integration"""
@@ -480,8 +637,24 @@ def calculate_parlay_probability(legs):
     
     # Combined probability (all legs must hit)
     parlay_prob = 1.0
-    for prob in leg_probabilities:
-        parlay_prob *= (prob / 100)
+    usage_injury_risks = []
+    
+    for idx, prob in enumerate(leg_probabilities):
+        # Apply usage/injury adjustments to each leg
+        player_name = legs[idx].get('player', '')
+        sport = legs[idx].get('sport', 'NBA')
+        
+        if player_name:
+            ui_data = calculate_usage_injury_factor(player_name, sport)
+            adjusted_prob = prob * ui_data['total_factor']
+            adjusted_prob = min(max(adjusted_prob, 5), 95)  # Cap between 5-95%
+            usage_injury_risks.append(ui_data['risk_level'])
+        else:
+            adjusted_prob = prob
+            usage_injury_risks.append("UNKNOWN")
+        
+        parlay_prob *= (adjusted_prob / 100)
+    
     parlay_prob *= 100
     
     # Calculate actual parlay odds
@@ -504,8 +677,12 @@ def calculate_parlay_probability(legs):
     
     ev = parlay_prob - market_implied_prob  # Edge vs market
     
-    # Risk assessment based on true win probability
-    if parlay_prob > 60:
+    # Enhanced risk assessment with usage/injury factors
+    if "AVOID" in usage_injury_risks:
+        risk = "🔴 CRITICAL RISK - Injured Player"
+    elif "HIGH RISK" in usage_injury_risks:
+        risk = "🟠 High Risk - Injury Concern"
+    elif parlay_prob > 60:
         risk = "🟢 Low Risk"
     elif parlay_prob > 40:
         risk = "🟡 Medium Risk"
@@ -2479,6 +2656,7 @@ with main_sport_tabs[0]:
         with header_cols[1]:
             if st.button("🗑️ Clear All Legs", use_container_width=True):
                 st.session_state.mock_parlay_legs = []
+                st.session_state.parlay_legs = []
                 st.rerun()
         
         # Initialize mock parlay legs
@@ -2811,8 +2989,8 @@ with main_sport_tabs[0]:
                         else:
                             implied_prob = 100 / (odds + 100) * 100
                         
-                        # Add to mock parlay
-                        st.session_state.mock_parlay_legs.append({
+                        # Create leg data
+                        leg_data = {
                             'player': player_info['player'],
                             'stat': selected_prop,
                             'over_under': over_under,
@@ -2820,8 +2998,16 @@ with main_sport_tabs[0]:
                             'implied_prob': implied_prob,
                             'game_time': player_info['game_time'],
                             'matchup': player_info['matchup'],
-                            'pace': 'Medium'
-                        })
+                            'pace': 'Medium',
+                            'sport': 'NBA',
+                            'line': 0,  # Will be populated from prop
+                            'current': 0  # Will be populated from live data
+                        }
+                        
+                        # Add to BOTH parlay lists for sidebar sync
+                        st.session_state.mock_parlay_legs.append(leg_data)
+                        st.session_state.parlay_legs.append(leg_data)
+                        
                         del st.session_state.temp_player_selection
                         st.success(f"✅ Added {player_info['player']} - {selected_prop} {over_under} to parlay!")
                         st.rerun()
@@ -3290,7 +3476,7 @@ with main_sport_tabs[1]:
                 
                 # Add to parlay button
                 if st.button("➕ Add to Parlay", type="primary", use_container_width=True):
-                    st.session_state.mock_parlay_legs.append({
+                    leg_data = {
                         'player': player_info['player'],
                         'stat': selected_prop,
                         'over_under': over_under,
@@ -3298,8 +3484,14 @@ with main_sport_tabs[1]:
                         'matchup': player_info['matchup'],
                         'game_time': player_info['game_time'],
                         'odds': adjusted_odds,
-                        'implied_prob': prob
-                        })
+                        'implied_prob': prob,
+                        'sport': 'NFL',
+                        'current': 0,
+                        'pace': 'Medium'
+                    }
+                    # Add to BOTH parlay lists for sidebar sync
+                    st.session_state.mock_parlay_legs.append(leg_data)
+                    st.session_state.parlay_legs.append(leg_data)
                     del st.session_state.temp_player_selection
                     st.success(f"✅ Added {player_info['player']} - {selected_prop} to parlay!")
                     st.rerun()
