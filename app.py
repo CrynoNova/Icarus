@@ -34,9 +34,78 @@ if 'parlay_legs' not in st.session_state:
 # MOBILE-FIRST CSS - Enhanced Design
 st.markdown("""
     <style>
-        /* Mobile-First Base Styles */
+        /* Mobile-First Base Styles with Black Background */
         .stApp {
             max-width: 100%;
+            background-color: #000000;
+        }
+        
+        /* Main content area */
+        .main {
+            background-color: #000000;
+        }
+        
+        /* All text white by default */
+        .stApp, .main, p, span, div, label {
+            color: #FFFFFF !important;
+        }
+        
+        /* Headers with gradient on black */
+        h1, h2, h3, h4, h5, h6 {
+            color: #FFFFFF !important;
+        }
+        
+        /* Sidebar black */
+        [data-testid="stSidebar"] {
+            background-color: #000000;
+        }
+        
+        /* Input fields with dark theme */
+        .stTextInput > div > div > input,
+        .stNumberInput > div > div > input,
+        .stSelectbox > div > div > select {
+            background-color: #1a1a1a !important;
+            color: #FFFFFF !important;
+            border: 1px solid #333333 !important;
+        }
+        
+        /* Buttons maintain gradient but work on black */
+        .stButton > button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        
+        /* Expander dark theme */
+        .streamlit-expanderHeader {
+            background-color: #1a1a1a !important;
+            color: #FFFFFF !important;
+        }
+        
+        /* Tabs dark theme */
+        .stTabs [data-baseweb="tab-list"] {
+            background-color: #1a1a1a;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            color: #FFFFFF !important;
+            background-color: #1a1a1a;
+        }
+        
+        /* Info/warning boxes dark theme */
+        .stAlert {
+            background-color: #1a1a1a !important;
+            color: #FFFFFF !important;
+        }
+        
+        /* Metrics dark theme */
+        [data-testid="stMetricValue"] {
+            color: #FFFFFF !important;
+        }
+        
+        /* Divider visible on black */
+        hr {
+            border-color: #333333 !important;
         }
         
         /* Metrics and Cards */
