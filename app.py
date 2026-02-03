@@ -3525,9 +3525,9 @@ with main_sport_tabs[0]:
                                     ast_current = live_player.get("ast", 0.0)
                                     
                                     # Get season averages for line comparison - NOW WITH REAL STATS
-                                    pts_line, _ = get_betting_line(player_name, 'Points', player_id)
-                                    reb_line, _ = get_betting_line(player_name, 'Rebounds', player_id)
-                                    ast_line, _ = get_betting_line(player_name, 'Assists', player_id)
+                                    pts_line, _ = get_betting_line(player_name, 'Points', player_id, sport="NBA")
+                                    reb_line, _ = get_betting_line(player_name, 'Rebounds', player_id, sport="NBA")
+                                    ast_line, _ = get_betting_line(player_name, 'Assists', player_id, sport="NBA")
                                     
                                     # Calculate live probabilities based on pace
                                     minutes_played = live_player.get("minutes", "0:00")
@@ -3555,9 +3555,9 @@ with main_sport_tabs[0]:
                                     data_source = f"🔴 LIVE • {mins} min"
                                 else:
                                     # UPCOMING GAME - Use season projections
-                                    pts_line, pts_current = get_betting_line(player_name, 'Points')
-                                    reb_line, reb_current = get_betting_line(player_name, 'Rebounds')
-                                    ast_line, ast_current = get_betting_line(player_name, 'Assists')
+                                    pts_line, pts_current = get_betting_line(player_name, 'Points', player_id, sport="NBA")
+                                    reb_line, reb_current = get_betting_line(player_name, 'Rebounds', player_id, sport="NBA")
+                                    ast_line, ast_current = get_betting_line(player_name, 'Assists', player_id, sport="NBA")
                                     
                                     # Base probability: 52% (fair line)
                                     pts_prob = 52.0
@@ -3664,9 +3664,9 @@ with main_sport_tabs[0]:
                                     ast_current = live_player.get("ast", 0.0)
                                     
                                     # Get season averages for line comparison - NOW WITH REAL STATS
-                                    pts_line, _ = get_betting_line(player_name, 'Points', player_id)
-                                    reb_line, _ = get_betting_line(player_name, 'Rebounds', player_id)
-                                    ast_line, _ = get_betting_line(player_name, 'Assists', player_id)
+                                    pts_line, _ = get_betting_line(player_name, 'Points', player_id, sport="NBA")
+                                    reb_line, _ = get_betting_line(player_name, 'Rebounds', player_id, sport="NBA")
+                                    ast_line, _ = get_betting_line(player_name, 'Assists', player_id, sport="NBA")
                                     
                                     # Calculate live probabilities based on pace
                                     minutes_played = live_player.get("minutes", "0:00")
@@ -3694,9 +3694,9 @@ with main_sport_tabs[0]:
                                     data_source = f"🔴 LIVE • {mins} min"
                                 else:
                                     # UPCOMING GAME - Use season projections
-                                    pts_line, pts_current = get_betting_line(player_name, 'Points')
-                                    reb_line, reb_current = get_betting_line(player_name, 'Rebounds')
-                                    ast_line, ast_current = get_betting_line(player_name, 'Assists')
+                                    pts_line, pts_current = get_betting_line(player_name, 'Points', player_id, sport="NBA")
+                                    reb_line, reb_current = get_betting_line(player_name, 'Rebounds', player_id, sport="NBA")
+                                    ast_line, ast_current = get_betting_line(player_name, 'Assists', player_id, sport="NBA")
                                     
                                     # Base probability: 52% (fair line)
                                     pts_prob = 52.0
