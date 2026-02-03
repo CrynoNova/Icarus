@@ -4797,12 +4797,15 @@ with st.expander("🎯 Build a Parlay - Real-Time Odds Calculator", expanded=len
                 if players and len(players) > 0:
                     st.caption(f"📋 {len(players)} active players • 📡 ESPN API • ✅ Healthy only")
                     
-                    for player_name in players[:10]:  # Show top 10
+                    for player_dict in players[:10]:  # Show top 10
+                        player_name = player_dict['name']
+                        player_id = player_dict.get('id', None)
+                        
                         # Sanitize player name for key (remove spaces and special chars)
                         player_key = player_name.replace(" ", "_").replace("'", "").replace(".", "").replace("-", "_")
                         
-                        # Get real-time stats for player
-                        player_line, player_current = get_betting_line(player_name, 'Points')
+                        # Get real-time stats for player - pass player_id and sport
+                        player_line, player_current = get_betting_line(player_name, 'Points', player_id, sport="NBA")
                         
                         col1, col2, col3 = st.columns([3, 1, 1])
                         with col1:
