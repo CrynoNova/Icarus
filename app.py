@@ -471,9 +471,17 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
         
-        # Risk indicator
-        risk_emoji = "🟢" if "Low" in risk else "🟡" if "Medium" in risk else "🔴"
-        risk_color = "#38ef7d" if "Low" in risk else "#f2c94c" if "Medium" in risk else "#f45c43"
+        # Risk indicator - Updated color coding: Green (80%+), Yellow (50-79%), Red (<50%)
+        if win_prob >= 80:
+            risk_emoji = "🟢"
+            risk_color = "#38ef7d"  # Bright green for excellent bets (80%+)
+        elif win_prob >= 50:
+            risk_emoji = "🟡"
+            risk_color = "#f2c94c"  # Yellow for medium risk (50-79%)
+        else:
+            risk_emoji = "🔴"
+            risk_color = "#f45c43"  # Red for high risk (<50%)
+        
         st.markdown(f"""
         <div style='background: {risk_color}; padding: 0.5rem; border-radius: 0.5rem; 
                     text-align: center; color: white; font-weight: bold; margin-bottom: 1rem;'>
@@ -911,16 +919,17 @@ def calculate_parlay_probability(legs):
     ev = parlay_prob - market_implied_prob  # Edge vs market
     
     # Enhanced risk assessment with usage/injury factors
+    # Color-coded: Green (80%+), Yellow (50-79%), Red (<50%)
     if "AVOID" in usage_injury_risks:
         risk = "🔴 CRITICAL RISK - Injured Player"
     elif "HIGH RISK" in usage_injury_risks:
         risk = "🟠 High Risk - Injury Concern"
-    elif parlay_prob > 60:
-        risk = "🟢 Low Risk"
-    elif parlay_prob > 40:
-        risk = "🟡 Medium Risk"
+    elif parlay_prob >= 80:
+        risk = "🟢 Excellent Bet"  # Green for 80%+ win probability
+    elif parlay_prob >= 50:
+        risk = "🟡 Medium Risk"  # Yellow for 50-79%
     else:
-        risk = "🔴 High Risk"
+        risk = "🔴 High Risk"  # Red for <50%
     
     return parlay_prob, ev, risk
 
@@ -1810,19 +1819,21 @@ def get_nfl_betting_line(player_name, stat_type):
     current = int(line * 0.85)
     return line, current
 
-def get_betting_line(player_name, stat_type, player_id=None):
+def get_betting_line(player_name, stat_type, player_id=None, sport="NBA"):
     """Fetch betting line for player - ESPN SEASON STATS FIRST (most accurate), then fallback
     
     Args:
         player_name: Player's full name
-        stat_type: Type of stat (Points, Rebounds, Assists, etc.)
+        stat_type: Type of stat (Points, Rebounds, Assists, Passing Yards, etc.)
         player_id: Optional ESPN player ID for direct stats lookup
+        sport: Sport type (NBA, NFL, MLB, NHL)
     """
     # FIRST: Try ESPN API for real season averages (most accurate) if we have player ID
     if player_id:
         try:
-            season_stats = get_player_season_stats_by_id(player_id)
-            if season_stats:
+            # Get stats based on sport
+            if sport == "NBA":
+                season_stats = get_player_season_stats_by_id(player_id)
                 stat_map = {
                     'Points': 'points',
                     'Rebounds': 'rebounds',
@@ -1831,7 +1842,42 @@ def get_betting_line(player_name, stat_type, player_id=None):
                     'Steals': 'steals',
                     'Blocks': 'blocks'
                 }
-                
+            elif sport == "NFL":
+                season_stats = get_nfl_player_season_stats_by_id(player_id)
+                stat_map = {
+                    'Passing Yards': 'passing_yards',
+                    'Passing TDs': 'passing_tds',
+                    'Rushing Yards': 'rushing_yards',
+                    'Rushing TDs': 'rushing_tds',
+                    'Receptions': 'receptions',
+                    'Receiving Yards': 'receiving_yards',
+                    'Receiving TDs': 'receiving_tds'
+                }
+            elif sport == "MLB":
+                season_stats = get_mlb_player_season_stats_by_id(player_id)
+                stat_map = {
+                    'Hits': 'hits',
+                    'Runs': 'runs',
+                    'RBIs': 'rbis',
+                    'Home Runs': 'home_runs',
+                    'Stolen Bases': 'stolen_bases',
+                    'Strikeouts': 'strikeouts_pitching',
+                    'Wins': 'wins'
+                }
+            elif sport == "NHL":
+                season_stats = get_nhl_player_season_stats_by_id(player_id)
+                stat_map = {
+                    'Goals': 'goals',
+                    'Assists': 'assists',
+                    'Points': 'points',
+                    'Shots': 'shots',
+                    'Saves': 'saves'
+                }
+            else:
+                season_stats = None
+                stat_map = {}
+            
+            if season_stats:
                 stat_key = stat_map.get(stat_type)
                 if stat_key and season_stats.get(stat_key, 0) > 0:
                     season_avg = season_stats[stat_key]
@@ -1853,16 +1899,41 @@ def get_betting_line(player_name, stat_type, player_id=None):
     except:
         pass
     
-    # THIRD: Check database (curated season averages)
-    if player_name in BETTING_LINES:
+    # THIRD: Check database (curated season averages) based on sport
+    if sport == "NBA" and player_name in BETTING_LINES:
         player_data = BETTING_LINES[player_name]
         line = player_data.get(stat_type)
         current = player_data.get("current", {}).get(stat_type, 0)
         if line is not None:
             return line, current
+    elif sport == "NFL" and player_name in NFL_BETTING_LINES:
+        player_data = NFL_BETTING_LINES[player_name]
+        line = player_data.get(stat_type)
+        current = player_data.get("current", {}).get(stat_type, 0)
+        if line is not None:
+            return line, current
+    elif sport == "MLB" and player_name in MLB_BETTING_LINES:
+        player_data = MLB_BETTING_LINES[player_name]
+        line = player_data.get(stat_type)
+        current = player_data.get("current", {}).get(stat_type, 0)
+        if line is not None:
+            return line, current
+    elif sport == "NHL" and player_name in NHL_BETTING_LINES:
+        player_data = NHL_BETTING_LINES[player_name]
+        line = player_data.get(stat_type)
+        current = player_data.get("current", {}).get(stat_type, 0)
+        if line is not None:
+            return line, current
     
-    # LAST: Default fallback
-    return 15.0, 12.0
+    # LAST: Default fallback based on sport
+    if sport == "NFL":
+        return 200.0, 180.0  # Typical passing yards
+    elif sport == "MLB":
+        return 1.5, 1.0  # Typical hits
+    elif sport == "NHL":
+        return 0.5, 0.0  # Typical goals
+    else:
+        return 15.0, 12.0  # NBA points
 
 def is_key_player(player_name, sport="NBA"):
     """Determine if player is a starter/key rotation player worthy of props"""
@@ -2470,6 +2541,180 @@ def get_player_season_stats_by_id(player_id, season=2026):
             
             # If we got valid stats, return them
             if player_stats['points'] > 0 or player_stats['rebounds'] > 0:
+                return player_stats
+    except Exception as e:
+        pass
+    
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def get_nfl_player_season_stats_by_id(player_id, season=2026):
+    """Fetch real NFL player season statistics from ESPN v2 Core API using player ID
+    Returns per-game averages for passing/rushing/receiving stats
+    """
+    try:
+        stats_url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{season}/types/2/athletes/{player_id}/statistics"
+        stats_response = requests.get(stats_url, timeout=5)
+        
+        if stats_response.status_code == 200:
+            stats_data = stats_response.json()
+            splits = stats_data.get('splits', {})
+            categories = splits.get('categories', [])
+            
+            player_stats = {
+                'passing_yards': 0.0,
+                'passing_tds': 0.0,
+                'rushing_yards': 0.0,
+                'rushing_tds': 0.0,
+                'receptions': 0.0,
+                'receiving_yards': 0.0,
+                'receiving_tds': 0.0,
+                'games': 0
+            }
+            
+            # Parse stats from categories
+            for cat in categories:
+                stats = cat.get('stats', [])
+                for stat in stats:
+                    name = stat.get('name', '').lower()
+                    value = stat.get('value', 0)
+                    
+                    if 'passing' in name and 'yard' in name:
+                        player_stats['passing_yards'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'passing' in name and 'touchdown' in name:
+                        player_stats['passing_tds'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'rushing' in name and 'yard' in name:
+                        player_stats['rushing_yards'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'rushing' in name and 'touchdown' in name:
+                        player_stats['rushing_tds'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'reception' in name and 'yard' not in name:
+                        player_stats['receptions'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'receiving' in name and 'yard' in name:
+                        player_stats['receiving_yards'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'receiving' in name and 'touchdown' in name:
+                        player_stats['receiving_tds'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'gamesplayed':
+                        player_stats['games'] = int(value)
+            
+            # If we got valid stats, return them
+            if any(v > 0 for k, v in player_stats.items() if k != 'games'):
+                return player_stats
+    except Exception as e:
+        pass
+    
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def get_mlb_player_season_stats_by_id(player_id, season=2026):
+    """Fetch real MLB player season statistics from ESPN v2 Core API using player ID
+    Returns per-game/season averages for hitting and pitching stats
+    """
+    try:
+        stats_url = f"https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/seasons/{season}/types/2/athletes/{player_id}/statistics"
+        stats_response = requests.get(stats_url, timeout=5)
+        
+        if stats_response.status_code == 200:
+            stats_data = stats_response.json()
+            splits = stats_data.get('splits', {})
+            categories = splits.get('categories', [])
+            
+            player_stats = {
+                'hits': 0.0,
+                'runs': 0.0,
+                'rbis': 0.0,
+                'home_runs': 0.0,
+                'stolen_bases': 0.0,
+                'strikeouts_pitching': 0.0,
+                'wins': 0.0,
+                'era': 0.0,
+                'games': 0
+            }
+            
+            # Parse stats from categories
+            for cat in categories:
+                stats = cat.get('stats', [])
+                for stat in stats:
+                    name = stat.get('name', '').lower()
+                    value = stat.get('value', 0)
+                    
+                    if name == 'hits':
+                        player_stats['hits'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'runs':
+                        player_stats['runs'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name in ['runsbattedin', 'rbis']:
+                        player_stats['rbis'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'homerun' in name.replace(' ', ''):
+                        player_stats['home_runs'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'stolenbases' in name.replace(' ', ''):
+                        player_stats['stolen_bases'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'strikeout' in name and ('pitcher' in name or 'pitching' in name):
+                        player_stats['strikeouts_pitching'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'wins':
+                        player_stats['wins'] = float(value)
+                    elif name == 'era':
+                        player_stats['era'] = float(value)
+                    elif name == 'gamesplayed':
+                        player_stats['games'] = int(value)
+            
+            # If we got valid stats, return them
+            if any(v > 0 for k, v in player_stats.items() if k != 'games'):
+                return player_stats
+    except Exception as e:
+        pass
+    
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def get_nhl_player_season_stats_by_id(player_id, season=2026):
+    """Fetch real NHL player season statistics from ESPN v2 Core API using player ID
+    Returns per-game averages for goals, assists, points, etc.
+    """
+    try:
+        stats_url = f"https://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/seasons/{season}/types/2/athletes/{player_id}/statistics"
+        stats_response = requests.get(stats_url, timeout=5)
+        
+        if stats_response.status_code == 200:
+            stats_data = stats_response.json()
+            splits = stats_data.get('splits', {})
+            categories = splits.get('categories', [])
+            
+            player_stats = {
+                'goals': 0.0,
+                'assists': 0.0,
+                'points': 0.0,
+                'shots': 0.0,
+                'plus_minus': 0.0,
+                'saves': 0.0,  # For goalies
+                'goals_against_avg': 0.0,  # For goalies
+                'games': 0
+            }
+            
+            # Parse stats from categories
+            for cat in categories:
+                stats = cat.get('stats', [])
+                for stat in stats:
+                    name = stat.get('name', '').lower()
+                    value = stat.get('value', 0)
+                    
+                    if name == 'goals':
+                        player_stats['goals'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'assists':
+                        player_stats['assists'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'points':
+                        player_stats['points'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'shots':
+                        player_stats['shots'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'plusminus' in name.replace(' ', '').replace('-', ''):
+                        player_stats['plus_minus'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif name == 'saves':
+                        player_stats['saves'] = float(value) / max(player_stats.get('games', 1), 1)
+                    elif 'goalsagainst' in name.replace(' ', '') and 'average' in name:
+                        player_stats['goals_against_avg'] = float(value)
+                    elif name == 'gamesplayed':
+                        player_stats['games'] = int(value)
+            
+            # If we got valid stats, return them
+            if any(v > 0 for k, v in player_stats.items() if k not in ['games', 'plus_minus']):
                 return player_stats
     except Exception as e:
         pass
