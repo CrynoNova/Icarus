@@ -5,6 +5,18 @@ import random
 import time
 from zoneinfo import ZoneInfo
 
+# ========================================
+# BETTING API CONFIGURATION
+# ========================================
+# To enable real betting odds (optional):
+# 1. The Odds API - https://the-odds-api.com/
+#    - Free tier: 500 requests/month
+#    - Provides: Live odds, player props from DraftKings, FanDuel, BetMGM
+#    - Set ODDS_API_KEY in environment or below
+# 2. Currently using ESPN odds data (free, but limited)
+ODDS_API_KEY = None  # Set to your API key to enable: "your_api_key_here"
+# ========================================
+
 # API Health Check Function
 @st.cache_data(ttl=30)  # Cache for 30 seconds
 def check_espn_api_health():
@@ -44,6 +56,31 @@ def check_espn_api_health():
         health["message"] = "❌ Cannot Reach ESPN APIs"
     
     return health
+
+# Optional: Fetch real betting odds from The Odds API
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_betting_odds_from_api(sport="basketball_nba"):
+    """
+    Fetch live betting odds from The Odds API (optional, requires API key)
+    Returns player props and game odds if ODDS_API_KEY is set
+    """
+    if not ODDS_API_KEY:
+        return None
+    
+    try:
+        url = f"https://api.the-odds-api.com/v4/sports/{sport}/odds"
+        params = {
+            'apiKey': ODDS_API_KEY,
+            'regions': 'us',
+            'markets': 'h2h,spreads,totals',
+            'oddsFormat': 'american'
+        }
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return None
 
 # Auto-refresh every 30 seconds for real-time data
 if 'last_refresh' not in st.session_state:
@@ -1773,9 +1810,39 @@ def get_nfl_betting_line(player_name, stat_type):
     current = int(line * 0.85)
     return line, current
 
-def get_betting_line(player_name, stat_type):
-    """Fetch betting line for player - ESPN LIVE FIRST (most accurate), then database"""
-    # FIRST: Try ESPN API for live/recent games (most accurate real-time data)
+def get_betting_line(player_name, stat_type, player_id=None):
+    """Fetch betting line for player - ESPN SEASON STATS FIRST (most accurate), then fallback
+    
+    Args:
+        player_name: Player's full name
+        stat_type: Type of stat (Points, Rebounds, Assists, etc.)
+        player_id: Optional ESPN player ID for direct stats lookup
+    """
+    # FIRST: Try ESPN API for real season averages (most accurate) if we have player ID
+    if player_id:
+        try:
+            season_stats = get_player_season_stats_by_id(player_id)
+            if season_stats:
+                stat_map = {
+                    'Points': 'points',
+                    'Rebounds': 'rebounds',
+                    'Assists': 'assists',
+                    'Threes': 'threes',
+                    'Steals': 'steals',
+                    'Blocks': 'blocks'
+                }
+                
+                stat_key = stat_map.get(stat_type)
+                if stat_key and season_stats.get(stat_key, 0) > 0:
+                    season_avg = season_stats[stat_key]
+                    # Betting line is typically set slightly below season average
+                    line = round(season_avg - 0.5, 1)
+                    current = round(season_avg * 0.85, 1)  # Estimate current performance
+                    return line, current
+        except:
+            pass
+    
+    # SECOND: Try ESPN API for live/recent games
     try:
         live_stats = get_live_player_stats_from_scoreboard(player_name)
         if live_stats and stat_type in live_stats:
@@ -1786,7 +1853,7 @@ def get_betting_line(player_name, stat_type):
     except:
         pass
     
-    # SECOND: Check database (curated season averages)
+    # THIRD: Check database (curated season averages)
     if player_name in BETTING_LINES:
         player_data = BETTING_LINES[player_name]
         line = player_data.get(stat_type)
@@ -2291,36 +2358,123 @@ def get_nba_games(filter_24h=True):
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_nba_team_roster(team_id):
-    """Fetch actual NBA team roster from ESPN API - filters out injured/inactive players"""
+    """Fetch actual NBA team roster from ESPN v2 Core API - MORE RELIABLE than v1
+    Returns list of dicts with player name and ID for stat lookups
+    """
     try:
-        url = f"https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/{team_id}/roster"
-        response = requests.get(url, timeout=8)
+        # Use ESPN v2 Core API which is more reliable
+        url = f"https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2026/teams/{team_id}/athletes?limit=50"
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            athletes = data.get("athletes", [])
+            items = data.get("items", [])
             players = []
-            for athlete_group in athletes:
-                for athlete in athlete_group.get("items", []):
-                    player_name = athlete.get("fullName", "")
-                    
-                    # Check injury/status from roster data
-                    injuries = athlete.get("injuries", [])
-                    status = athlete.get("status", {}).get("type", "")
-                    
-                    # Only include healthy, active players
-                    is_injured = len(injuries) > 0
-                    is_active = status.lower() == "active" if status else True
-                    
-                    # Double-check with injury API for comprehensive filtering
-                    if player_name and is_active and not is_injured:
-                        injury_check = get_injury_status(player_name, "NBA")
-                        # Only exclude players who are OUT (impact 0.0)
-                        if injury_check["status"] != "Out" and injury_check["impact"] > 0.0:
-                            players.append(player_name)
-            return players  # Return all healthy players
+            
+            # Fetch each player's details
+            for item in items:
+                if '$ref' in item:
+                    try:
+                        player_url = item['$ref']
+                        player_response = requests.get(player_url, timeout=5)
+                        if player_response.status_code == 200:
+                            player_data = player_response.json()
+                            player_name = player_data.get('displayName', '')
+                            player_id = player_data.get('id')
+                            
+                            # Check if player is active
+                            is_active = player_data.get('active', True)
+                            
+                            if player_name and player_id and is_active:
+                                # Check injury status
+                                injury_check = get_injury_status(player_name, "NBA")
+                                # Only exclude players who are OUT (impact 0.0)
+                                if injury_check["status"] != "Out" and injury_check["impact"] > 0.0:
+                                    players.append({
+                                        'name': player_name,
+                                        'id': player_id
+                                    })
+                    except:
+                        continue
+            
+            return players  # Return all healthy, active players with IDs
     except:
         pass
     return []
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def get_player_season_stats_by_id(player_id, season=2026):
+    """Fetch real player season statistics from ESPN v2 Core API using player ID
+    Returns per-game averages for points, rebounds, assists, etc.
+    """
+    try:
+        stats_url = f"https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/{season}/types/2/athletes/{player_id}/statistics"
+        stats_response = requests.get(stats_url, timeout=5)
+        
+        if stats_response.status_code == 200:
+            stats_data = stats_response.json()
+            splits = stats_data.get('splits', {})
+            categories = splits.get('categories', [])
+            
+            player_stats = {
+                'points': 0.0,
+                'rebounds': 0.0,
+                'assists': 0.0,
+                'threes': 0.0,
+                'steals': 0.0,
+                'blocks': 0.0,
+                'turnovers': 0.0,
+                'minutes': 0.0,
+                'games': 0
+            }
+            
+            # Parse stats from categories - ESPN uses "avg{StatName}" for per-game
+            for cat in categories:
+                stats = cat.get('stats', [])
+                for stat in stats:
+                    name = stat.get('name', '').lower()
+                    value = stat.get('value', 0)
+                    
+                    # Per-game stats (avg prefix)
+                    if name == 'avgpoints' or name == 'points':
+                        player_stats['points'] = float(value)
+                    elif name == 'avgrebounds' or name == 'avgtotalrebounds':
+                        player_stats['rebounds'] = float(value)
+                    elif name == 'avgassists' or name == 'assists':
+                        player_stats['assists'] = float(value)
+                    elif name == 'avgthreepointfieldgoalsmade':
+                        player_stats['threes'] = float(value)
+                    elif name == 'avgsteals':
+                        player_stats['steals'] = float(value)
+                    elif name == 'avgblocks':
+                        player_stats['blocks'] = float(value)
+                    elif name == 'avgturnovers':
+                        player_stats['turnovers'] = float(value)
+                    elif name == 'avgminutes':
+                        player_stats['minutes'] = float(value)
+                    elif name == 'gamesplayed':
+                        player_stats['games'] = int(value)
+                    
+                    # Also try total stats and calculate per game
+                    elif name == 'points' and player_stats['points'] == 0:
+                        games = player_stats.get('games', 1)
+                        if games > 0:
+                            player_stats['points'] = float(value) / games
+                    elif name in ['totalrebounds', 'rebounds'] and player_stats['rebounds'] == 0:
+                        games = player_stats.get('games', 1)
+                        if games > 0:
+                            player_stats['rebounds'] = float(value) / games
+                    elif name == 'assists' and player_stats['assists'] == 0:
+                        games = player_stats.get('games', 1)
+                        if games > 0:
+                            player_stats['assists'] = float(value) / games
+            
+            # If we got valid stats, return them
+            if player_stats['points'] > 0 or player_stats['rebounds'] > 0:
+                return player_stats
+    except Exception as e:
+        pass
+    
+    return None
 
 def get_team_id_from_game(team_name, game_data):
     """Extract team ID from game data"""
@@ -3099,9 +3253,7 @@ with main_sport_tabs[0]:
                         away_team_id = get_team_id_from_game(away, game)
                         away_players = []
                         if away_team_id:
-                            away_players_raw = get_nba_team_roster(away_team_id)
-                            # Convert to dict format expected by the rest of the code
-                            away_players = [{"name": p} for p in away_players_raw] if away_players_raw else []
+                            away_players = get_nba_team_roster(away_team_id)  # Returns list of dicts with name and id
                         
                         # CRITICAL: Filter out injured players from ANY source
                         if away_players:
@@ -3117,6 +3269,7 @@ with main_sport_tabs[0]:
                         if away_players:
                             for player_data in away_players[:8]:  # Top 8 healthy players
                                 player_name = player_data['name']
+                                player_id = player_data.get('id')  # Get player ID for accurate stats
                                 
                                 # Use live stats if available, otherwise use projections
                                 if is_live and live_stats and player_name in live_stats:
@@ -3126,10 +3279,10 @@ with main_sport_tabs[0]:
                                     reb_current = live_player.get("reb", 0.0)
                                     ast_current = live_player.get("ast", 0.0)
                                     
-                                    # Get season averages for line comparison
-                                    pts_line, _ = get_betting_line(player_name, 'Points')
-                                    reb_line, _ = get_betting_line(player_name, 'Rebounds')
-                                    ast_line, _ = get_betting_line(player_name, 'Assists')
+                                    # Get season averages for line comparison - NOW WITH REAL STATS
+                                    pts_line, _ = get_betting_line(player_name, 'Points', player_id)
+                                    reb_line, _ = get_betting_line(player_name, 'Rebounds', player_id)
+                                    ast_line, _ = get_betting_line(player_name, 'Assists', player_id)
                                     
                                     # Calculate live probabilities based on pace
                                     minutes_played = live_player.get("minutes", "0:00")
@@ -3239,9 +3392,7 @@ with main_sport_tabs[0]:
                         home_team_id = get_team_id_from_game(home, game)
                         home_players = []
                         if home_team_id:
-                            home_players_raw = get_nba_team_roster(home_team_id)
-                            # Convert to dict format expected by the rest of the code
-                            home_players = [{"name": p} for p in home_players_raw] if home_players_raw else []
+                            home_players = get_nba_team_roster(home_team_id)  # Returns list of dicts with name and id
                         
                         # CRITICAL: Filter out injured players from ANY source
                         if home_players:
@@ -3257,6 +3408,7 @@ with main_sport_tabs[0]:
                         if home_players:
                             for player_data in home_players[:8]:  # Top 8 healthy players
                                 player_name = player_data['name']
+                                player_id = player_data.get('id')  # Get player ID for accurate stats
                                 
                                 # Use live stats if available, otherwise use projections
                                 if is_live and live_stats and player_name in live_stats:
@@ -3266,10 +3418,10 @@ with main_sport_tabs[0]:
                                     reb_current = live_player.get("reb", 0.0)
                                     ast_current = live_player.get("ast", 0.0)
                                     
-                                    # Get season averages for line comparison
-                                    pts_line, _ = get_betting_line(player_name, 'Points')
-                                    reb_line, _ = get_betting_line(player_name, 'Rebounds')
-                                    ast_line, _ = get_betting_line(player_name, 'Assists')
+                                    # Get season averages for line comparison - NOW WITH REAL STATS
+                                    pts_line, _ = get_betting_line(player_name, 'Points', player_id)
+                                    reb_line, _ = get_betting_line(player_name, 'Rebounds', player_id)
+                                    ast_line, _ = get_betting_line(player_name, 'Assists', player_id)
                                     
                                     # Calculate live probabilities based on pace
                                     minutes_played = live_player.get("minutes", "0:00")
