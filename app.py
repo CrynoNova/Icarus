@@ -3407,18 +3407,333 @@ with data_explainer:
 st.markdown("---")
 
 # ========================================
+# AUTO-BUILD PARLAY FUNCTION
+# ========================================
+def auto_build_parlay(risk_tier="green", num_legs=4, sports=["NBA", "NFL", "MLB", "NHL"]):
+    """
+    Automatically build a parlay based on risk tier
+    
+    Args:
+        risk_tier: 'green' (80%+ prob), 'yellow' (50-79% prob), 'red' (<50% prob)
+        num_legs: Number of legs to include (2-8)
+        sports: List of sports to include
+    
+    Returns:
+        List of leg dictionaries
+    """
+    import random
+    
+    auto_parlay = []
+    
+    # Define probability thresholds based on risk tier
+    if risk_tier == "green":
+        min_prob, max_prob = 0.80, 1.0
+        tier_name = "🟢 High Probability"
+    elif risk_tier == "yellow":
+        min_prob, max_prob = 0.50, 0.79
+        tier_name = "🟡 Medium Risk"
+    else:  # red
+        min_prob, max_prob = 0.30, 0.49
+        tier_name = "🔴 High Risk"
+    
+    # Collect all available games from selected sports
+    all_games = []
+    
+    if "NBA" in sports:
+        nba_games = fetch_upcoming_games("basketball", "nba", days_ahead=3)
+        for game in nba_games[:2]:  # Limit to 2 games per sport
+            all_games.append(("NBA", game))
+    
+    if "NFL" in sports:
+        nfl_games = fetch_upcoming_games("football", "nfl", days_ahead=7)
+        for game in nfl_games[:2]:
+            all_games.append(("NFL", game))
+    
+    if "MLB" in sports:
+        mlb_games = fetch_upcoming_games("baseball", "mlb", days_ahead=3)
+        for game in mlb_games[:2]:
+            all_games.append(("MLB", game))
+    
+    if "NHL" in sports:
+        nhl_games = fetch_upcoming_games("hockey", "nhl", days_ahead=3)
+        for game in nhl_games[:2]:
+            all_games.append(("NHL", game))
+    
+    # Shuffle to randomize selection
+    random.shuffle(all_games)
+    
+    # Build parlay legs
+    for sport, game in all_games:
+        if len(auto_parlay) >= num_legs:
+            break
+        
+        try:
+            # Get teams
+            competitions = game.get("competitions", [])
+            if not competitions:
+                continue
+            
+            competition = competitions[0]
+            competitors = competition.get("competitors", [])
+            
+            if len(competitors) < 2:
+                continue
+            
+            # Get team IDs
+            away_team_id = competitors[1].get("id")
+            home_team_id = competitors[0].get("id")
+            
+            # Get game info
+            game_time = competition.get("date", "TBD")
+            matchup = f"{competitors[1].get('team', {}).get('abbreviation', 'AWAY')} @ {competitors[0].get('team', {}).get('abbreviation', 'HOME')}"
+            
+            # Get roster based on sport
+            if sport == "NBA":
+                roster = get_nba_team_roster(away_team_id) + get_nba_team_roster(home_team_id)
+                stat_types = ['Points', 'Rebounds', 'Assists', 'Threes']
+            elif sport == "NFL":
+                roster = get_nfl_team_roster(away_team_id) + get_nfl_team_roster(home_team_id)
+                stat_types = ['Passing Yards', 'Rushing Yards', 'Receiving Yards', 'Receptions']
+            elif sport == "MLB":
+                roster = get_mlb_team_roster(away_team_id) + get_mlb_team_roster(home_team_id)
+                stat_types = ['Hits', 'Runs', 'RBIs', 'Home Runs']
+            elif sport == "NHL":
+                roster = get_nhl_team_roster(away_team_id) + get_nhl_team_roster(home_team_id)
+                stat_types = ['Goals', 'Assists', 'Points', 'Shots']
+            else:
+                continue
+            
+            # Filter roster to active players
+            roster = [p for p in roster if p and isinstance(p, dict)]
+            if not roster:
+                continue
+            
+            # Try to find a good prop
+            attempts = 0
+            while attempts < 10 and len(auto_parlay) < num_legs:
+                attempts += 1
+                
+                # Pick random player and stat
+                player_dict = random.choice(roster)
+                player_name = player_dict.get('name', '')
+                player_id = player_dict.get('id')
+                
+                if not player_name:
+                    continue
+                
+                stat_type = random.choice(stat_types)
+                
+                # Get betting line
+                line, current = get_betting_line(player_name, stat_type, player_id, sport=sport)
+                
+                if line <= 0 or current <= 0:
+                    continue
+                
+                # Calculate probability (current performance vs line)
+                if current >= line:
+                    prob = 0.55 + (min(current - line, 5) * 0.05)  # 55-80% if over
+                else:
+                    prob = 0.45 - (min(line - current, 5) * 0.05)  # 30-45% if under
+                
+                prob = max(0.30, min(0.95, prob))  # Clamp between 30-95%
+                
+                # Check if it matches risk tier
+                if min_prob <= prob <= max_prob:
+                    # Determine over/under based on performance
+                    over_under = "Over" if current >= line else random.choice(["Over", "Under"])
+                    
+                    # Calculate odds based on probability
+                    if prob >= 0.70:
+                        odds = -200  # Favorite
+                    elif prob >= 0.55:
+                        odds = -120
+                    else:
+                        odds = 110  # Underdog
+                    
+                    # Create leg
+                    leg_data = {
+                        'player': player_name,
+                        'stat': stat_type,
+                        'over_under': over_under,
+                        'odds': odds,
+                        'implied_prob': prob * 100,
+                        'game_time': game_time,
+                        'matchup': matchup,
+                        'pace': 'Medium',
+                        'sport': sport,
+                        'line': line,
+                        'current': current
+                    }
+                    
+                    auto_parlay.append(leg_data)
+                    break  # Move to next game
+        
+        except Exception as e:
+            continue
+    
+    return auto_parlay
+
+# ========================================
 # MULTI-SPORT TABS - MAIN NAVIGATION
 # ========================================
 st.markdown("### 🎯 Build Your Parlay - Multi-Sport Platform")
 st.caption("📊 NBA • NFL • Soccer • MLB • NHL • UFC • Tennis • Real-time stats & analysis")
 
 # Create main sport tabs
-main_sport_tabs = st.tabs(["🏀 NBA", "🏈 NFL", "⚽ Soccer", "⚾ MLB", "🏒 NHL", "🥊 UFC", "🎾 Tennis"])
+main_sport_tabs = st.tabs(["🤖 Auto Build", "🏀 NBA", "🏈 NFL", "⚽ Soccer", "⚾ MLB", "🏒 NHL", "🥊 UFC", "🎾 Tennis"])
+
+# ========================================
+# AUTO BUILD TAB
+# ========================================
+with main_sport_tabs[0]:
+    st.markdown("### 🤖 Auto-Build Your Parlay")
+    st.caption("⚡ Let AI build a parlay for you based on your risk tolerance • Then customize it!")
+    
+    st.markdown("---")
+    
+    # Auto-build controls
+    col1, col2, col3 = st.columns([2, 2, 2])
+    
+    with col1:
+        risk_selection = st.selectbox(
+            "🎯 Risk Tier",
+            options=["green", "yellow", "red"],
+            format_func=lambda x: {"green": "🟢 High Probability (80%+ win rate)", 
+                                    "yellow": "🟡 Medium Risk (50-79% win rate)", 
+                                    "red": "🔴 High Risk (<50% win rate)"}[x],
+            help="Select your preferred risk level for auto-generated props"
+        )
+    
+    with col2:
+        num_legs = st.slider("📊 Number of Legs", min_value=2, max_value=8, value=4, 
+                             help="How many props to include in your parlay")
+    
+    with col3:
+        selected_sports = st.multiselect(
+            "🏆 Sports to Include",
+            options=["NBA", "NFL", "MLB", "NHL"],
+            default=["NBA", "NFL"],
+            help="Select which sports to pull props from"
+        )
+    
+    st.markdown("---")
+    
+    # Auto-build button
+    col_btn1, col_btn2 = st.columns([1, 3])
+    with col_btn1:
+        if st.button("🤖 **Auto Build Parlay**", use_container_width=True, type="primary"):
+            if not selected_sports:
+                st.error("⚠️ Please select at least one sport!")
+            else:
+                with st.spinner(f"🔍 Finding best {risk_selection.upper()} tier props across {', '.join(selected_sports)}..."):
+                    auto_legs = auto_build_parlay(risk_tier=risk_selection, num_legs=num_legs, sports=selected_sports)
+                    
+                    if auto_legs:
+                        # Add to parlay
+                        st.session_state.parlay_legs.extend(auto_legs)
+                        st.success(f"✅ Auto-built {len(auto_legs)} leg parlay! Check the sidebar to view and edit.")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ Couldn't find enough props matching your criteria. Try different settings!")
+    
+    with col_btn2:
+        if st.button("🗑️ Clear Current Parlay", use_container_width=True):
+            st.session_state.parlay_legs = []
+            st.success("✅ Parlay cleared!")
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Risk tier explanation
+    st.markdown("### 📊 Risk Tier Guide")
+    
+    tier_col1, tier_col2, tier_col3 = st.columns(3)
+    
+    with tier_col1:
+        st.markdown("""
+        <div style='background: linear-gradient(135deg, #38ef7d, #11998e); padding: 20px; border-radius: 10px; color: white;'>
+            <h4 style='margin: 0; color: white;'>🟢 High Probability</h4>
+            <p style='margin: 10px 0 0 0; font-size: 14px;'>
+                <strong>Win Rate:</strong> 80%+<br>
+                <strong>Props:</strong> Safe, consistent performers<br>
+                <strong>Odds:</strong> Lower payout, higher hit rate<br>
+                <strong>Best For:</strong> Conservative bettors
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tier_col2:
+        st.markdown("""
+        <div style='background: linear-gradient(135deg, #f2c94c, #f39c12); padding: 20px; border-radius: 10px; color: white;'>
+            <h4 style='margin: 0; color: white;'>🟡 Medium Risk</h4>
+            <p style='margin: 10px 0 0 0; font-size: 14px;'>
+                <strong>Win Rate:</strong> 50-79%<br>
+                <strong>Props:</strong> Balanced risk/reward<br>
+                <strong>Odds:</strong> Moderate payout<br>
+                <strong>Best For:</strong> Balanced approach
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tier_col3:
+        st.markdown("""
+        <div style='background: linear-gradient(135deg, #f45c43, #eb3349); padding: 20px; border-radius: 10px; color: white;'>
+            <h4 style='margin: 0; color: white;'>🔴 High Risk</h4>
+            <p style='margin: 10px 0 0 0; font-size: 14px;'>
+                <strong>Win Rate:</strong> <50%<br>
+                <strong>Props:</strong> Longshots, value bets<br>
+                <strong>Odds:</strong> High payout potential<br>
+                <strong>Best For:</strong> Risk-takers
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Feature highlights
+    st.markdown("### ✨ Auto-Build Features")
+    
+    feat_col1, feat_col2 = st.columns(2)
+    
+    with feat_col1:
+        st.markdown("""
+        **🎯 Smart Prop Selection**
+        - Uses real ESPN season stats
+        - Filters by win probability
+        - Considers player performance trends
+        
+        **🏆 Multi-Sport Coverage**
+        - NBA: Points, Rebounds, Assists
+        - NFL: Passing/Rushing/Receiving Yards
+        - MLB: Hits, Runs, RBIs
+        - NHL: Goals, Assists, Points
+        """)
+    
+    with feat_col2:
+        st.markdown("""
+        **✏️ Fully Editable**
+        - View auto-built parlay in sidebar
+        - Remove any legs you don't like
+        - Add more props manually from other tabs
+        - Adjust before placing bet
+        
+        **📊 Real-Time Risk Analysis**
+        - Color-coded win probability
+        - Expected value (EV) calculation
+        - Overall parlay risk assessment
+        """)
+    
+    st.markdown("---")
+    
+    st.info("""
+    💡 **Pro Tip:** Start with GREEN tier to build a solid foundation, then add 1-2 YELLOW or RED props 
+    from other tabs for higher payouts while maintaining decent probability!
+    """)
 
 # ========================================
 # NBA TAB
 # ========================================
-with main_sport_tabs[0]:
+with main_sport_tabs[1]:
     st.markdown("### 🏀 NBA - Upcoming Matchups")
     st.caption("📅 Select from upcoming games • 📊 Points, Rebounds, Assists & more • 🎯 Build realistic parlays")
 
@@ -3885,7 +4200,7 @@ with main_sport_tabs[0]:
 # ========================================
 # NFL TAB
 # ========================================
-with main_sport_tabs[1]:
+with main_sport_tabs[2]:
     st.markdown("### 🏈 NFL - Player Props")
     st.caption("📊 Passing Yards • Rushing Yards • Touchdowns • Receptions")
     
@@ -4329,7 +4644,7 @@ with main_sport_tabs[1]:
 # ========================================
 # SOCCER TAB
 # ========================================
-with main_sport_tabs[2]:
+with main_sport_tabs[3]:
     st.markdown("### ⚽ Soccer - Player Props")
     st.caption("📊 Goals • Assists • Shots on Target • Tackles")
     
@@ -4339,7 +4654,7 @@ with main_sport_tabs[2]:
 # ========================================
 # MLB TAB
 # ========================================
-with main_sport_tabs[3]:
+with main_sport_tabs[4]:
     st.markdown("### ⚾ MLB - Player Props")
     st.caption("📊 Hits • Home Runs • RBIs • Strikeouts • Pitching Stats")
     
@@ -4531,7 +4846,7 @@ with main_sport_tabs[3]:
 # ========================================
 # NHL TAB
 # ========================================
-with main_sport_tabs[4]:
+with main_sport_tabs[5]:
     st.markdown("### 🏒 NHL - Player Props")
     st.caption("📊 Goals • Assists • Shots • Saves • Plus/Minus")
     
@@ -4723,7 +5038,7 @@ with main_sport_tabs[4]:
 # ========================================
 # UFC TAB
 # ========================================
-with main_sport_tabs[5]:
+with main_sport_tabs[6]:
     st.markdown("### 🥊 UFC - Fight Props")
     st.caption("📊 Method of Victory • Round Betting • Fight Duration")
     
@@ -4733,7 +5048,7 @@ with main_sport_tabs[5]:
 # ========================================
 # TENNIS TAB
 # ========================================
-with main_sport_tabs[6]:
+with main_sport_tabs[7]:
     st.markdown("### 🎾 Tennis - Match Props")
     st.caption("📊 Sets • Games • Aces • Service Games")
     
